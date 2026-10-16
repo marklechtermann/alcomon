@@ -1,5 +1,7 @@
 package de.alcomon.hubbell.ui.draw
 
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -9,25 +11,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import de.alcomon.hubbell.game.Drink
+import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
 private val Skin = Color(0xFFF5C9A0)
 private val SkinShade = Color(0xFFE3AE80)
-private val Jacket = Color(0xFF2F6B3A)
-private val JacketDark = Color(0xFF245530)
-private val Shirt = Color(0xFFFFF8EC)
-private val Hair = Color(0xFF6B4423)
-private val MustacheColor = Color(0xFF5A3418)
-private val HatGreen = Color(0xFF3E5F2F)
-private val HatBand = Color(0xFFB8322F)
-private val Feather = Color(0xFFD9A441)
-private val Ink = Color(0xFF3B2414)
+private val Shirt = Color(0xFF1C1C1F)
+private val ShirtPrint = Color(0xFFE8E4DA)
+private val Hair = Color(0xFF2A1D16)
+private val HairLight = Color(0xFF3D2B20)
+private val Beard = Color(0xFF3A2A1E)
+private val Wristband = Color(0xFF111111)
+private val Stud = Color(0xFFB0B4BA)
+private val Ink = Color(0xFF2B1A12)
+private val DevilRed = Color(0xFFD7263D)
 
 /** Alles, was die Szene zum Zeichnen über Hubbells Zustand wissen muss. */
 data class HubbellPose(
@@ -41,7 +50,7 @@ data class HubbellPose(
 
 /** Kneipe, Stuhl, Hubbell, Tisch und das nächste Getränk. */
 fun DrawScope.drawHubbellScene(pose: HubbellPose) {
-    drawPub(pose.time)
+    drawMetalBar(pose.time)
     val w = size.width
     val h = size.height
     val u = min(w / 100f, h / 118f)
@@ -49,13 +58,13 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
     val tableTop = h * 0.74f
 
     drawRoundRect(
-        Color(0xFF4A2A14),
+        Color(0xFF2B2B30),
         topLeft = Offset(cx - 25f * u, tableTop - 52f * u),
         size = Size(50f * u, 54f * u),
         cornerRadius = CornerRadius(8f * u),
     )
     drawRoundRect(
-        Color(0xFF3A200F),
+        Color(0xFF1C1C20),
         topLeft = Offset(cx - 20f * u, tableTop - 47f * u),
         size = Size(40f * u, 6f * u),
         cornerRadius = CornerRadius(3f * u),
@@ -82,24 +91,61 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
     }
 }
 
-fun DrawScope.drawPub(time: Float) {
+private class Poster(
+    val x: Float, val y: Float, val w: Float, val h: Float, val tilt: Float,
+    val background: Color, val ink: Color, val band: String, val motif: Int,
+)
+
+private val Posters = listOf(
+    Poster(0.04f, 0.05f, 0.24f, 0.2f, -9f, Color(0xFF1B1B1B), Color(0xFFE0E0E0), "BIERZERKER", 0),
+    Poster(0.7f, 0.04f, 0.26f, 0.18f, 7f, Color(0xFF7A1010), Color(0xFFFFD27A), "IRON LEBER", 1),
+    Poster(0.02f, 0.41f, 0.2f, 0.14f, 12f, Color(0xFF2C3E50), Color(0xFF9FD3E8), "HOPFENTOD", 2),
+    Poster(0.77f, 0.42f, 0.21f, 0.13f, -6f, Color(0xFF3B2A12), Color(0xFFF2B32A), "THRASH TRESEN", 0),
+)
+
+/** Dunkle Metal-Bar mit Backsteinwand, schiefen Bandpostern und rotem Neonlicht. */
+fun DrawScope.drawMetalBar(time: Float) {
     val w = size.width
     val h = size.height
-    drawRect(Brush.verticalGradient(listOf(Color(0xFF7A4A26), Color(0xFF4A2A14))))
-    val plank = w / 7f
-    for (i in 1..6) {
-        drawLine(Color(0x33000000), Offset(i * plank, 0f), Offset(i * plank, h * 0.62f), strokeWidth = max(2f, w * 0.004f))
+    drawRect(Brush.verticalGradient(listOf(Color(0xFF2A2326), Color(0xFF151214))))
+
+    // Backsteine
+    val brickH = h * 0.045f
+    val brickW = w * 0.14f
+    val mortar = Color(0x33000000)
+    var row = 0
+    var y = 0f
+    while (y < h * 0.62f) {
+        drawLine(mortar, Offset(0f, y), Offset(w, y), strokeWidth = max(1.5f, h * 0.003f))
+        var x = if (row % 2 == 0) 0f else -brickW / 2f
+        while (x < w) {
+            drawLine(mortar, Offset(x, y), Offset(x, y + brickH), strokeWidth = max(1.5f, h * 0.003f))
+            if ((row * 7 + (x / brickW).toInt() * 3) % 5 == 0) {
+                drawRect(Color(0x14FFFFFF), topLeft = Offset(x + 2f, y + 2f), size = Size(brickW - 4f, brickH - 4f))
+            }
+            x += brickW
+        }
+        y += brickH
+        row++
     }
-    // Wandvertäfelung
-    drawRect(Color(0xFF3A200F), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.4f))
-    drawRect(Color(0xFF8A5A30), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.014f))
+
+    // Rotes Neonlicht von oben
+    val glow = 0.3f + 0.04f * sin(time * 9f) + if (sin(time * 1.3f) > 0.97f) -0.15f else 0f
+    drawCircle(
+        Brush.radialGradient(listOf(Color(0xFFFF3B3B).copy(alpha = glow), Color.Transparent), center = Offset(w * 0.5f, 0f), radius = w * 0.8f),
+        radius = w * 0.8f,
+        center = Offset(w * 0.5f, 0f),
+    )
+
+    // Theke unten
+    drawRect(Color(0xFF1A1416), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.4f))
+    drawRect(Color(0xFF5C5F66), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.012f))
 
     // Regal mit Flaschen
     val shelfY = h * 0.34f
     val bottles = listOf(
         0.08f to Color(0xFF2E7D32), 0.14f to Color(0xFF8D5524), 0.2f to Color(0xFFC77B1E),
-        0.27f to Color(0xFF1B5E20), 0.72f to Color(0xFF8E1B2E), 0.79f to Color(0xFFC77B1E),
-        0.85f to Color(0xFF4E342E), 0.91f to Color(0xFF2E7D32),
+        0.8f to Color(0xFF4E342E), 0.86f to Color(0xFFC77B1E), 0.92f to Color(0xFF1B5E20),
     )
     val bw = w * 0.04f
     bottles.forEachIndexed { i, (x, color) ->
@@ -107,71 +153,116 @@ fun DrawScope.drawPub(time: Float) {
         val left = x * w - bw / 2f
         drawRoundRect(color, topLeft = Offset(left, shelfY - bh), size = Size(bw, bh * 0.72f), cornerRadius = CornerRadius(bw * 0.25f))
         drawRect(color, topLeft = Offset(left + bw * 0.32f, shelfY - bh - bh * 0.05f), size = Size(bw * 0.36f, bh * 0.4f))
-        drawRect(Color(0xFFFFF3D6).copy(alpha = 0.8f), topLeft = Offset(left + bw * 0.15f, shelfY - bh * 0.6f), size = Size(bw * 0.7f, bh * 0.22f))
+        drawRect(Color(0xFF111111), topLeft = Offset(left + bw * 0.15f, shelfY - bh * 0.6f), size = Size(bw * 0.7f, bh * 0.22f))
         drawLine(Color(0x55FFFFFF), Offset(left + bw * 0.2f, shelfY - bh * 0.9f), Offset(left + bw * 0.2f, shelfY - bh * 0.35f), strokeWidth = bw * 0.12f)
     }
-    drawRect(Color(0xFF2E1A0C), topLeft = Offset(w * 0.03f, shelfY), size = Size(w * 0.94f, h * 0.018f))
+    drawRect(Color(0xFF3A3A40), topLeft = Offset(w * 0.03f, shelfY), size = Size(w * 0.94f, h * 0.018f))
 
-    // Bild mit Bergen
-    val frameTop = Offset(w * 0.07f, h * 0.06f)
-    val frameSize = Size(w * 0.2f, h * 0.15f)
-    drawRect(Color(0xFFC9963B), topLeft = frameTop, size = frameSize)
-    val inner = Offset(frameTop.x + w * 0.012f, frameTop.y + w * 0.012f)
-    val innerSize = Size(frameSize.width - w * 0.024f, frameSize.height - w * 0.024f)
-    drawRect(Color(0xFF9FD3E8), topLeft = inner, size = innerSize)
-    val mountain = Path().apply {
-        moveTo(inner.x, inner.y + innerSize.height)
-        lineTo(inner.x + innerSize.width * 0.35f, inner.y + innerSize.height * 0.3f)
-        lineTo(inner.x + innerSize.width * 0.55f, inner.y + innerSize.height * 0.6f)
-        lineTo(inner.x + innerSize.width * 0.75f, inner.y + innerSize.height * 0.2f)
-        lineTo(inner.x + innerSize.width, inner.y + innerSize.height)
+    Posters.forEach { drawPoster(it, time) }
+
+    // Neon-Schild
+    drawIntoCanvas { canvas ->
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD_ITALIC)
+            textSize = w * 0.07f
+            color = Color(0xFFFF6B6B).toArgb()
+            setShadowLayer(w * 0.025f, 0f, 0f, Color(0xFFFF2020).toArgb())
+        }
+        canvas.nativeCanvas.drawText("METAL BAR", w * 0.5f, h * 0.17f, paint)
+    }
+}
+
+private fun DrawScope.drawPoster(p: Poster, time: Float) {
+    val w = size.width
+    val h = size.height
+    val left = p.x * w
+    val top = p.y * h
+    val pw = p.w * w
+    val ph = p.h * h
+    // leichtes Wackeln, als hänge es nur an einem Nagel
+    val tilt = p.tilt + sin(time * 0.8f + p.x * 10f) * 0.6f
+    rotate(tilt, pivot = Offset(left + pw / 2f, top)) {
+        drawRect(Color(0x55000000), topLeft = Offset(left + pw * 0.04f, top + ph * 0.05f), size = Size(pw, ph))
+        drawRect(p.background, topLeft = Offset(left, top), size = Size(pw, ph))
+        drawRect(p.ink.copy(alpha = 0.6f), topLeft = Offset(left, top), size = Size(pw, ph), style = Stroke(pw * 0.02f))
+        val c = Offset(left + pw / 2f, top + ph * 0.6f)
+        val r = min(pw, ph) * 0.22f
+        when (p.motif) {
+            0 -> drawSkull(c, r, p.ink, Color(0xFF111111))
+            1 -> { // Blitz
+                val bolt = Path().apply {
+                    moveTo(c.x + r * 0.3f, c.y - r)
+                    lineTo(c.x - r * 0.5f, c.y + r * 0.1f)
+                    lineTo(c.x, c.y + r * 0.1f)
+                    lineTo(c.x - r * 0.3f, c.y + r)
+                    lineTo(c.x + r * 0.5f, c.y - r * 0.15f)
+                    lineTo(c.x, c.y - r * 0.15f)
+                    close()
+                }
+                drawPath(bolt, p.ink)
+            }
+            else -> { // Flammen
+                for (i in -2..2) {
+                    val fx = c.x + i * r * 0.45f
+                    val flame = Path().apply {
+                        moveTo(fx - r * 0.25f, c.y + r * 0.8f)
+                        quadraticBezierTo(fx - r * 0.35f, c.y - r * 0.1f, fx, c.y - r * (0.6f + 0.2f * abs(i % 2)))
+                        quadraticBezierTo(fx + r * 0.35f, c.y - r * 0.1f, fx + r * 0.25f, c.y + r * 0.8f)
+                        close()
+                    }
+                    drawPath(flame, p.ink.copy(alpha = 0.85f))
+                }
+            }
+        }
+        drawIntoCanvas { canvas ->
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+                color = p.ink.toArgb()
+                textSize = ph * 0.2f
+                textScaleX = 0.85f
+            }
+            while (paint.measureText(p.band) > pw * 0.9f && paint.textSize > 4f) paint.textSize *= 0.92f
+            canvas.nativeCanvas.drawText(p.band, left + pw / 2f, top + ph * 0.26f, paint)
+        }
+        // Klebestreifen
+        drawRect(Color(0x99E8E0C8), topLeft = Offset(left + pw * 0.4f, top - ph * 0.04f), size = Size(pw * 0.2f, ph * 0.08f))
+    }
+}
+
+private fun DrawScope.drawSkull(c: Offset, r: Float, bone: Color, holes: Color) {
+    drawCircle(bone, r, c)
+    drawRoundRect(bone, topLeft = Offset(c.x - r * 0.55f, c.y + r * 0.5f), size = Size(r * 1.1f, r * 0.75f), cornerRadius = CornerRadius(r * 0.2f))
+    drawCircle(holes, r * 0.28f, Offset(c.x - r * 0.4f, c.y + r * 0.05f))
+    drawCircle(holes, r * 0.28f, Offset(c.x + r * 0.4f, c.y + r * 0.05f))
+    val nose = Path().apply {
+        moveTo(c.x, c.y + r * 0.3f)
+        lineTo(c.x - r * 0.12f, c.y + r * 0.55f)
+        lineTo(c.x + r * 0.12f, c.y + r * 0.55f)
         close()
     }
-    drawPath(mountain, Color(0xFF5B7F4A))
-
-    // Schild "PROST" rechts oben als Bierkrug-Silhouette
-    val signC = Offset(w * 0.85f, h * 0.14f)
-    drawCircle(Color(0xFF2E1A0C), w * 0.075f, signC)
-    drawCircle(Color(0xFFC9963B), w * 0.068f, signC, style = Stroke(w * 0.008f))
-    drawRoundRect(Color(0xFFF2B32A), topLeft = Offset(signC.x - w * 0.03f, signC.y - w * 0.025f), size = Size(w * 0.05f, w * 0.06f), cornerRadius = CornerRadius(w * 0.008f))
-    drawCircle(Color(0xFFFFFBF0), w * 0.02f, Offset(signC.x - w * 0.012f, signC.y - w * 0.028f))
-    drawCircle(Color(0xFFFFFBF0), w * 0.018f, Offset(signC.x + w * 0.012f, signC.y - w * 0.03f))
-    drawArc(
-        Color(0xFFF2B32A), startAngle = -90f, sweepAngle = 180f, useCenter = false,
-        topLeft = Offset(signC.x + w * 0.008f, signC.y - w * 0.01f), size = Size(w * 0.03f, w * 0.03f),
-        style = Stroke(w * 0.008f),
-    )
-
-    // Lampe mit warmem Licht
-    val lamp = Offset(w * 0.5f, h * 0.1f)
-    val flicker = 0.38f + 0.03f * sin(time * 7f)
-    drawCircle(
-        Brush.radialGradient(listOf(Color(0xFFFFD27A).copy(alpha = flicker), Color.Transparent), center = lamp, radius = w * 0.65f),
-        radius = w * 0.65f,
-        center = lamp,
-    )
-    drawLine(Color(0xFF1E120A), Offset(lamp.x, 0f), Offset(lamp.x, lamp.y - h * 0.02f), strokeWidth = max(2f, w * 0.006f))
-    val shade = Path().apply {
-        moveTo(lamp.x - w * 0.03f, lamp.y - h * 0.025f)
-        lineTo(lamp.x + w * 0.03f, lamp.y - h * 0.025f)
-        lineTo(lamp.x + w * 0.07f, lamp.y + h * 0.02f)
-        lineTo(lamp.x - w * 0.07f, lamp.y + h * 0.02f)
-        close()
+    drawPath(nose, holes)
+    for (i in -1..1) {
+        drawLine(holes, Offset(c.x + i * r * 0.25f, c.y + r * 0.8f), Offset(c.x + i * r * 0.25f, c.y + r * 1.2f), strokeWidth = r * 0.08f)
     }
-    drawPath(shade, Color(0xFF2F6B3A))
-    drawCircle(Color(0xFFFFF1B8), w * 0.02f, Offset(lamp.x, lamp.y + h * 0.022f))
 }
 
 private fun DrawScope.drawTable(tableTop: Float, u: Float) {
     val w = size.width
     val h = size.height
-    drawRect(Color(0xFF8B5A2B), topLeft = Offset(0f, tableTop), size = Size(w, h - tableTop))
-    drawRect(Color(0xFFB07A42), topLeft = Offset(0f, tableTop), size = Size(w, 3f * u))
-    drawRect(Color(0xFF6E431E), topLeft = Offset(0f, tableTop + 9f * u), size = Size(w, h - tableTop - 9f * u))
+    drawRect(Color(0xFF4A2E1A), topLeft = Offset(0f, tableTop), size = Size(w, h - tableTop))
+    drawRect(Color(0xFF6E4728), topLeft = Offset(0f, tableTop), size = Size(w, 3f * u))
+    drawRect(Color(0xFF3A2312), topLeft = Offset(0f, tableTop + 9f * u), size = Size(w, h - tableTop - 9f * u))
     for (i in 0..4) {
         val y = tableTop + 13f * u + i * 6f * u
         drawLine(Color(0x22000000), Offset(w * (0.05f + 0.1f * (i % 3)), y), Offset(w * (0.6f + 0.08f * i), y), strokeWidth = 0.8f * u)
     }
+    // eingeritzte Pommesgabel im Tisch
+    val m = Offset(w * 0.15f, tableTop + 6f * u)
+    drawLine(Color(0x44000000), m, m + Offset(-1.5f * u, -3f * u), strokeWidth = 0.7f * u)
+    drawLine(Color(0x44000000), m + Offset(3f * u, 0f), m + Offset(4.5f * u, -3f * u), strokeWidth = 0.7f * u)
+    drawLine(Color(0x44000000), m + Offset(-1f * u, 0.5f * u), m + Offset(4f * u, 0.5f * u), strokeWidth = 0.7f * u)
 }
 
 private fun smooth(x: Float): Float {
@@ -186,140 +277,76 @@ private fun liftCurve(progress: Float): Float = when {
     else -> 1f
 }
 
+/** Ein- und Ausblenden einer Aktion, die von [start] bis [start] + [length] im Zyklus läuft. */
+private fun envelope(phase: Float, start: Float, length: Float): Float {
+    val local = phase - start
+    if (local < 0f || local > length) return 0f
+    val edge = 0.25f
+    return min(smooth(local / edge), smooth((length - local) / edge))
+}
+
+private const val CYCLE = 10f
+private const val HEADBANG_START = 3f
+private const val HEADBANG_LENGTH = 1.8f
+private const val HORNS_START = 6.5f
+private const val HORNS_LENGTH = 2.2f
+
 private fun DrawScope.drawHubbell(cx: Float, tableTop: Float, u: Float, pose: HubbellPose) {
     val p = (pose.pegel / 100f).coerceIn(0f, 1f)
     val sober = pose.pegel < 20f
+    val idle = pose.drinking == null && !sober
+    val phase = pose.time % CYCLE
+    val bang = if (idle) envelope(phase, HEADBANG_START, HEADBANG_LENGTH) else 0f
+    val horns = if (idle) envelope(phase, HORNS_START, HORNS_LENGTH) else 0f
+    val rocking = bang > 0.05f || horns > 0.3f
     val angle = sin(pose.time * 1.6f) * (1f + p * 7f)
 
     rotate(angle, pivot = Offset(cx, tableTop + 8f * u)) {
         val headY = tableTop - 41f * u
-        val headR = 15f * u
 
-        // Körper mit Trachtenjanker
-        drawOval(Jacket, topLeft = Offset(cx - 22f * u, tableTop - 28f * u), size = Size(44f * u, 44f * u))
-        val shirt = Path().apply {
-            moveTo(cx - 7f * u, tableTop - 27f * u)
-            lineTo(cx + 7f * u, tableTop - 27f * u)
-            lineTo(cx, tableTop - 11f * u)
-            close()
-        }
-        drawPath(shirt, Shirt)
-        val bowLeft = Path().apply {
-            moveTo(cx, tableTop - 24f * u)
-            lineTo(cx - 4.5f * u, tableTop - 27f * u)
-            lineTo(cx - 4.5f * u, tableTop - 21f * u)
-            close()
-        }
-        val bowRight = Path().apply {
-            moveTo(cx, tableTop - 24f * u)
-            lineTo(cx + 4.5f * u, tableTop - 27f * u)
-            lineTo(cx + 4.5f * u, tableTop - 21f * u)
-            close()
-        }
-        drawPath(bowLeft, HatBand)
-        drawPath(bowRight, HatBand)
-        for (i in 0..1) drawCircle(Color(0xFFC9963B), 1.1f * u, Offset(cx + 10f * u, tableTop - 18f * u + i * 6f * u))
+        // Körper mit Metal-Shirt
+        drawOval(Shirt, topLeft = Offset(cx - 22f * u, tableTop - 28f * u), size = Size(44f * u, 44f * u))
+        drawArc(
+            Color(0xFF3A3A40), startAngle = 0f, sweepAngle = 180f, useCenter = false,
+            topLeft = Offset(cx - 6f * u, tableTop - 30f * u), size = Size(12f * u, 6f * u),
+            style = Stroke(1.2f * u),
+        )
+        // Totenkopf mit Teufelshörnchen und Bierkrug-Augen auf dem Shirt
+        val skull = Offset(cx, tableTop - 17f * u)
+        drawPath(
+            Path().apply {
+                moveTo(skull.x - 4f * u, skull.y - 3f * u)
+                quadraticBezierTo(skull.x - 7f * u, skull.y - 6f * u, skull.x - 6f * u, skull.y - 9f * u)
+                lineTo(skull.x - 2.5f * u, skull.y - 4.5f * u)
+                close()
+                moveTo(skull.x + 4f * u, skull.y - 3f * u)
+                quadraticBezierTo(skull.x + 7f * u, skull.y - 6f * u, skull.x + 6f * u, skull.y - 9f * u)
+                lineTo(skull.x + 2.5f * u, skull.y - 4.5f * u)
+                close()
+            },
+            DevilRed,
+        )
+        drawSkull(skull, 4.5f * u, ShirtPrint, Shirt)
+        drawLine(DevilRed, Offset(cx - 9f * u, tableTop - 6f * u), Offset(cx + 9f * u, tableTop - 6f * u), strokeWidth = 1f * u)
 
-        // Linker Arm liegt auf dem Tisch
-        drawLine(JacketDark, Offset(cx - 18f * u, tableTop - 20f * u), Offset(cx - 24f * u, tableTop - 2f * u), strokeWidth = 8f * u, cap = StrokeCap.Round)
-        drawCircle(Skin, 3.8f * u, Offset(cx - 24f * u, tableTop - 1.5f * u))
-
-        // Ohren, Kopf, Haare
-        drawCircle(Skin, 3.6f * u, Offset(cx - 15f * u, headY + 1f * u))
-        drawCircle(Skin, 3.6f * u, Offset(cx + 15f * u, headY + 1f * u))
-        drawCircle(Skin, headR, Offset(cx, headY))
-        drawCircle(Hair, 4f * u, Offset(cx - 13f * u, headY - 4f * u))
-        drawCircle(Hair, 4f * u, Offset(cx + 13f * u, headY - 4f * u))
-
-        // Tirolerhut mit Feder
-        val crown = Path().apply {
-            moveTo(cx - 11f * u, headY - 11f * u)
-            lineTo(cx - 8.5f * u, headY - 25f * u)
-            quadraticBezierTo(cx, headY - 29f * u, cx + 8.5f * u, headY - 25f * u)
-            lineTo(cx + 11f * u, headY - 11f * u)
-            close()
-        }
-        drawPath(crown, HatGreen)
-        drawLine(HatBand, Offset(cx - 10.5f * u, headY - 14f * u), Offset(cx + 10.5f * u, headY - 14f * u), strokeWidth = 3f * u)
-        val feather = Path().apply {
-            moveTo(cx + 8f * u, headY - 15f * u)
-            quadraticBezierTo(cx + 22f * u, headY - 22f * u, cx + 19f * u, headY - 34f * u)
-            quadraticBezierTo(cx + 12f * u, headY - 24f * u, cx + 8f * u, headY - 15f * u)
-            close()
-        }
-        drawPath(feather, Feather)
-        drawOval(HatGreen, topLeft = Offset(cx - 19f * u, headY - 14f * u), size = Size(38f * u, 6f * u))
-
-        // Augenbrauen
-        val eyeY = headY - 2f * u
-        val ex = 5.5f * u
-        for (sx in listOf(-1f, 1f)) {
-            val inner = Offset(cx + sx * 2.8f * u, eyeY - if (sober) 6.5f * u else 5.2f * u)
-            val outer = Offset(cx + sx * 8.2f * u, eyeY - if (sober) 4.5f * u else 5.6f * u)
-            drawLine(Hair, inner, outer, strokeWidth = 1.4f * u, cap = StrokeCap.Round)
-        }
-
-        // Augen
-        if (pose.drinking != null || pose.pegel >= 80f) {
-            for (sx in listOf(-1f, 1f)) {
-                drawArc(
-                    Ink, startAngle = 180f, sweepAngle = 180f, useCenter = false,
-                    topLeft = Offset(cx + sx * ex - 2.8f * u, eyeY - 1.5f * u), size = Size(5.6f * u, 4f * u),
-                    style = Stroke(1.4f * u, cap = StrokeCap.Round),
-                )
-            }
-        } else {
-            val pupil = if (sober) 1.0f * u else 1.6f * u
-            val wobble = sin(pose.time * 2.3f) * 0.7f * u * p
-            for (sx in listOf(-1f, 1f)) {
-                drawCircle(Color.White, 2.8f * u, Offset(cx + sx * ex, eyeY))
-                drawCircle(Ink, pupil, Offset(cx + sx * ex + wobble, eyeY + 0.3f * u))
-                if (pose.pegel >= 50f) {
-                    drawArc(
-                        SkinShade, startAngle = 180f, sweepAngle = 180f, useCenter = true,
-                        topLeft = Offset(cx + sx * ex - 3f * u, eyeY - 3f * u), size = Size(6f * u, 6f * u),
-                    )
-                }
+        // Kopf (beim Headbangen nickt er kräftig)
+        val bob = abs(sin(pose.time * 14f)) * 4f * u * bang
+        val headAngle = sin(pose.time * 14f) * 12f * bang
+        val neck = Offset(cx, headY + 14f * u)
+        translate(0f, bob) {
+            rotate(headAngle, pivot = neck) {
+                drawHead(cx, headY, u, pose, p, sober, rocking, bang)
             }
         }
 
-        // Rote Bäckchen – je höher der Pegel, desto röter
-        val cheek = Color(0xFFE0565B).copy(alpha = 0.12f + 0.5f * p)
-        drawCircle(cheek, 3.6f * u, Offset(cx - 9.5f * u, headY + 4f * u))
-        drawCircle(cheek, 3.6f * u, Offset(cx + 9.5f * u, headY + 4f * u))
-
-        // Knollennase
-        drawCircle(lerp(SkinShade, Color(0xFFE0565B), p), 3.9f * u, Offset(cx, headY + 2f * u))
-        drawCircle(Color(0x66FFFFFF), 1.1f * u, Offset(cx - 1.2f * u, headY + 0.8f * u))
-
-        // Mund
-        val mouthY = headY + 7.5f * u
-        when {
-            pose.drinking != null -> drawCircle(Ink, 1.8f * u, Offset(cx, mouthY + 1.5f * u))
-            sober -> drawArc(
-                Ink, startAngle = 180f, sweepAngle = 180f, useCenter = false,
-                topLeft = Offset(cx - 4f * u, mouthY + 1.5f * u), size = Size(8f * u, 4f * u),
-                style = Stroke(1.5f * u, cap = StrokeCap.Round),
-            )
-            else -> {
-                val mw = 6f * u + 5f * u * p
-                drawArc(
-                    Ink, startAngle = 0f, sweepAngle = 180f, useCenter = p > 0.6f,
-                    topLeft = Offset(cx - mw / 2f, mouthY - 1f * u), size = Size(mw, 3.5f * u + 2.5f * u * p),
-                    style = if (p > 0.6f) androidx.compose.ui.graphics.drawscope.Fill else Stroke(1.5f * u, cap = StrokeCap.Round),
-                )
-            }
-        }
-
-        // Schnauzbart
-        drawOval(MustacheColor, topLeft = Offset(cx - 8.5f * u, headY + 4.2f * u), size = Size(8.5f * u, 3.4f * u))
-        drawOval(MustacheColor, topLeft = Offset(cx, headY + 4.2f * u), size = Size(8.5f * u, 3.4f * u))
-
-        // Angstschweiß, wenn er nüchtern wird
-        if (sober) {
-            val drop = Offset(cx + 12f * u, headY - 8f * u + (pose.time * 6f % 4f) * u)
-            drawCircle(Color(0xFF8FD3FF), 1.6f * u, drop)
-        }
+        // Linker Arm: liegt auf dem Tisch oder zeigt die Pommesgabel
+        val leftShoulder = Offset(cx - 18f * u, tableTop - 20f * u)
+        val leftRest = Offset(cx - 24f * u, tableTop - 1.5f * u)
+        val wave = sin(pose.time * 6f) * 2f * u * horns
+        val leftUp = Offset(cx - 31f * u + wave, headY - 10f * u)
+        val leftHand = lerp(leftRest, leftUp, horns)
+        drawArm(leftShoulder, leftHand, u)
+        if (horns > 0.5f) drawHornsHand(leftHand, u) else drawCircle(Skin, 3.8f * u, leftHand)
 
         // Rechter Arm mit Glas
         val shoulder = Offset(cx + 18f * u, tableTop - 20f * u)
@@ -328,7 +355,7 @@ private fun DrawScope.drawHubbell(cx: Float, tableTop: Float, u: Float, pose: Hu
         val drink = pose.drinking
         val lift = if (drink != null) liftCurve(pose.drinkProgress) else 0f
         val hand = lerp(rest, mouth, lift)
-        drawLine(JacketDark, shoulder, hand, strokeWidth = 8f * u, cap = StrokeCap.Round)
+        drawArm(shoulder, hand, u)
         if (drink != null) {
             val gw = 9f * u
             val gh = 14f * u
@@ -337,5 +364,183 @@ private fun DrawScope.drawHubbell(cx: Float, tableTop: Float, u: Float, pose: Hu
             }
         }
         drawCircle(Skin, 3.8f * u, hand)
+    }
+}
+
+/** Kurzer schwarzer Ärmel, nackter Unterarm und Nietenarmband. */
+private fun DrawScope.drawArm(shoulder: Offset, hand: Offset, u: Float) {
+    val sleeveEnd = lerp(shoulder, hand, 0.3f)
+    drawLine(Skin, shoulder, hand, strokeWidth = 6.5f * u, cap = StrokeCap.Round)
+    drawLine(Shirt, shoulder, sleeveEnd, strokeWidth = 8.5f * u, cap = StrokeCap.Round)
+    val bandStart = lerp(shoulder, hand, 0.78f)
+    val bandEnd = lerp(shoulder, hand, 0.9f)
+    drawLine(Wristband, bandStart, bandEnd, strokeWidth = 7f * u, cap = StrokeCap.Butt)
+    val mid = lerp(bandStart, bandEnd, 0.5f)
+    drawCircle(Stud, 0.9f * u, mid + Offset(-1.8f * u, 0f))
+    drawCircle(Stud, 0.9f * u, mid + Offset(1.8f * u, 0f))
+}
+
+/** Die Pommesgabel: Faust mit ausgestrecktem Zeige- und kleinem Finger. */
+private fun DrawScope.drawHornsHand(hand: Offset, u: Float) {
+    val finger = 1.9f * u
+    drawLine(Skin, hand + Offset(-1.8f * u, -1f * u), hand + Offset(-3f * u, -9f * u), strokeWidth = finger, cap = StrokeCap.Round)
+    drawLine(Skin, hand + Offset(2f * u, -1f * u), hand + Offset(3.6f * u, -8f * u), strokeWidth = finger, cap = StrokeCap.Round)
+    drawCircle(Skin, 3.8f * u, hand)
+    drawLine(SkinShade, hand + Offset(-2f * u, 0.5f * u), hand + Offset(2f * u, 0.5f * u), strokeWidth = 1.4f * u, cap = StrokeCap.Round)
+    drawLine(SkinShade, hand + Offset(-1.2f * u, -1.5f * u), hand + Offset(1.6f * u, -1.5f * u), strokeWidth = 0.8f * u, cap = StrokeCap.Round)
+}
+
+private fun DrawScope.drawHead(
+    cx: Float, headY: Float, u: Float, pose: HubbellPose,
+    p: Float, sober: Boolean, rocking: Boolean, bang: Float,
+) {
+    val headR = 15f * u
+    // Lange Mähne: beim Headbangen fliegen die Strähnen
+    val flick = sin(pose.time * 14f + 1f) * 3f * u * bang
+    drawRoundRect(Hair, topLeft = Offset(cx - 18.5f * u, headY - 12f * u), size = Size(37f * u, 22f * u), cornerRadius = CornerRadius(10f * u))
+    for (side in listOf(-1f, 1f)) {
+        val strand = Path().apply {
+            val inner = cx + side * 9f * u
+            val outer = cx + side * 19.5f * u
+            moveTo(inner, headY)
+            lineTo(outer, headY - 4f * u)
+            quadraticBezierTo(outer + side * 2f * u + flick, headY + 18f * u, outer + side * 1f * u + flick * 1.5f, headY + 31f * u)
+            lineTo(outer - side * 3f * u + flick * 1.5f, headY + 28f * u)
+            lineTo(outer - side * 6f * u + flick, headY + 32f * u)
+            quadraticBezierTo(inner + side * 1f * u, headY + 20f * u, inner, headY)
+            close()
+        }
+        drawPath(strand, Hair)
+        drawLine(HairLight, Offset(cx + side * 15f * u, headY + 2f * u), Offset(cx + side * 16.5f * u + flick, headY + 24f * u), strokeWidth = 0.8f * u)
+    }
+
+    drawCircle(Skin, headR, Offset(cx, headY))
+
+    // Haaransatz mit Pony-Zacken
+    drawArc(
+        Hair, startAngle = 180f, sweepAngle = 180f, useCenter = true,
+        topLeft = Offset(cx - 16f * u, headY - 17f * u), size = Size(32f * u, 18f * u),
+    )
+    val fringe = Path().apply {
+        moveTo(cx - 14f * u, headY - 8.5f * u)
+        lineTo(cx - 11f * u, headY - 5.5f * u)
+        lineTo(cx - 8f * u, headY - 8.5f * u)
+        lineTo(cx - 4f * u, headY - 6.5f * u)
+        lineTo(cx, headY - 8.5f * u)
+        lineTo(cx + 5f * u, headY - 6f * u)
+        lineTo(cx + 9f * u, headY - 8.5f * u)
+        lineTo(cx + 12f * u, headY - 6f * u)
+        lineTo(cx + 14.5f * u, headY - 8.5f * u)
+        close()
+    }
+    drawPath(fringe, Hair)
+
+    // Augenbrauen
+    val eyeY = headY - 2f * u
+    val ex = 5.5f * u
+    for (sx in listOf(-1f, 1f)) {
+        val inner = Offset(cx + sx * 2.8f * u, eyeY - if (sober) 5.5f * u else 4.3f * u)
+        val outer = Offset(cx + sx * 8.2f * u, eyeY - if (sober) 3.8f * u else 4.8f * u)
+        drawLine(Hair, inner, outer, strokeWidth = 1.5f * u, cap = StrokeCap.Round)
+    }
+
+    // Augen
+    if (pose.drinking != null || pose.pegel >= 80f || rocking) {
+        for (sx in listOf(-1f, 1f)) {
+            drawArc(
+                Ink, startAngle = 180f, sweepAngle = 180f, useCenter = false,
+                topLeft = Offset(cx + sx * ex - 2.8f * u, eyeY - 1.5f * u), size = Size(5.6f * u, 4f * u),
+                style = Stroke(1.4f * u, cap = StrokeCap.Round),
+            )
+        }
+    } else {
+        val pupil = if (sober) 1.0f * u else 1.6f * u
+        val wobble = sin(pose.time * 2.3f) * 0.7f * u * p
+        for (sx in listOf(-1f, 1f)) {
+            drawCircle(Color.White, 2.8f * u, Offset(cx + sx * ex, eyeY))
+            drawCircle(Ink, pupil, Offset(cx + sx * ex + wobble, eyeY + 0.3f * u))
+            if (pose.pegel >= 50f) {
+                drawArc(
+                    SkinShade, startAngle = 180f, sweepAngle = 180f, useCenter = true,
+                    topLeft = Offset(cx + sx * ex - 3f * u, eyeY - 3f * u), size = Size(6f * u, 6f * u),
+                )
+            }
+        }
+    }
+
+    // Rote Bäckchen – je höher der Pegel, desto röter
+    val cheek = Color(0xFFE0565B).copy(alpha = 0.12f + 0.5f * p)
+    drawCircle(cheek, 3.4f * u, Offset(cx - 9.5f * u, headY + 3.5f * u))
+    drawCircle(cheek, 3.4f * u, Offset(cx + 9.5f * u, headY + 3.5f * u))
+
+    // Fusseliger Kinnbart
+    val chin = listOf(-7f to 9.5f, -4.5f to 12f, -1.5f to 13.5f, 1.5f to 13.5f, 4.5f to 12f, 7f to 9.5f)
+    chin.forEach { (dx, dy) -> drawCircle(Beard, 3.1f * u, Offset(cx + dx * u, headY + dy * u)) }
+    val goatee = Path().apply {
+        moveTo(cx - 4f * u, headY + 14f * u)
+        lineTo(cx + 4f * u, headY + 14f * u)
+        lineTo(cx + 1f * u, headY + 21f * u)
+        lineTo(cx - 1.5f * u, headY + 20f * u)
+        close()
+    }
+    drawPath(goatee, Beard)
+    val fuzz = listOf(-9f to 9f, -7f to 13f, -3f to 16f, 3f to 16f, 7f to 13f, 9f to 9f, 0f to 21f)
+    fuzz.forEachIndexed { i, (dx, dy) ->
+        val base = Offset(cx + dx * u, headY + dy * u)
+        val dir = Offset(dx * 0.12f * u + (if (i % 2 == 0) 0.6f else -0.6f) * u, 1.8f * u)
+        drawLine(Beard, base, base + dir, strokeWidth = 0.7f * u, cap = StrokeCap.Round)
+    }
+
+    // Knollennase
+    drawCircle(lerp(SkinShade, Color(0xFFE0565B), p), 3.9f * u, Offset(cx, headY + 2f * u))
+    drawCircle(Color(0x66FFFFFF), 1.1f * u, Offset(cx - 1.2f * u, headY + 0.8f * u))
+
+    // Mund
+    val mouthY = headY + 7.5f * u
+    when {
+        pose.drinking != null -> drawCircle(Ink, 1.8f * u, Offset(cx, mouthY + 1.5f * u))
+        sober -> drawArc(
+            Ink, startAngle = 180f, sweepAngle = 180f, useCenter = false,
+            topLeft = Offset(cx - 4f * u, mouthY + 1.5f * u), size = Size(8f * u, 4f * u),
+            style = Stroke(1.5f * u, cap = StrokeCap.Round),
+        )
+        else -> {
+            val open = rocking || p > 0.6f
+            val mw = 6f * u + 5f * u * p + if (rocking) 2f * u else 0f
+            val mh = 3.5f * u + 2.5f * u * p + if (rocking) 2f * u else 0f
+            drawArc(
+                Ink, startAngle = 0f, sweepAngle = 180f, useCenter = open,
+                topLeft = Offset(cx - mw / 2f, mouthY - 1f * u), size = Size(mw, mh),
+                style = if (open) Fill else Stroke(1.5f * u, cap = StrokeCap.Round),
+            )
+            if (open) {
+                drawArc(
+                    DevilRed.copy(alpha = 0.8f), startAngle = 20f, sweepAngle = 140f, useCenter = true,
+                    topLeft = Offset(cx - mw * 0.3f, mouthY + mh * 0.25f), size = Size(mw * 0.6f, mh * 0.6f),
+                )
+            }
+        }
+    }
+
+    // Schnauzer, etwas zerzaust
+    drawOval(Beard, topLeft = Offset(cx - 8f * u, headY + 4.4f * u), size = Size(8f * u, 3f * u))
+    drawOval(Beard, topLeft = Offset(cx, headY + 4.4f * u), size = Size(8f * u, 3f * u))
+    drawLine(Beard, Offset(cx - 7.5f * u, headY + 6.5f * u), Offset(cx - 9f * u, headY + 8.5f * u), strokeWidth = 1f * u, cap = StrokeCap.Round)
+    drawLine(Beard, Offset(cx + 7.5f * u, headY + 6.5f * u), Offset(cx + 9f * u, headY + 8.5f * u), strokeWidth = 1f * u, cap = StrokeCap.Round)
+
+    // Angstschweiß, wenn er nüchtern wird
+    if (sober) {
+        val drop = Offset(cx + 12f * u, headY - 8f * u + (pose.time * 6f % 4f) * u)
+        drawCircle(Color(0xFF8FD3FF), 1.6f * u, drop)
+    }
+
+    // Sternchen beim Headbangen
+    if (bang > 0.3f) {
+        val spin = pose.time * 4f
+        for (i in 0..2) {
+            val a = spin + i * 2f * PI.toFloat() / 3f
+            val star = Offset(cx + kotlin.math.cos(a) * 20f * u, headY - 18f * u + sin(a) * 4f * u)
+            drawCircle(Color(0xFFF2B32A).copy(alpha = bang), 1.3f * u, star)
+        }
     }
 }

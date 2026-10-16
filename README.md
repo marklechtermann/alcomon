@@ -1,6 +1,6 @@
 # Hubbell
 
-Ein kleines Android-Spiel: Hubbell sitzt in seiner Stammkneipe und will auf keinen Fall nüchtern werden.
+Ein kleines Android-Spiel: Hubbell, ein sympathischer Metaller mit langer Mähne, Fusselbart und Metal-Shirt, sitzt in seiner Metal-Bar und will auf keinen Fall nüchtern werden. Zwischendurch headbangt er und zeigt die Pommesgabel.
 
 ## Spielprinzip
 
@@ -10,7 +10,7 @@ Ein kleines Android-Spiel: Hubbell sitzt in seiner Stammkneipe und will auf kein
   Dazu gibt es Verbesserungen wie den Turbo-Zapfhahn, Spendierhosen, die Eiserne Leber und Kellnerin Gerda, die automatisch serviert.
 - Ab 80 % Pegel hat Hubbell beste Laune und es gibt doppelte Taler.
 - Fällt der Pegel auf **null**, bleiben dir **10 Sekunden**, um ihn mit einem Getränk zu retten. Sonst ist das Spiel vorbei.
-- Jeder Level-Aufstieg wird gefeiert: Konfetti, Feuerwerk, die ganze Kneipe feiert mit, Disco-Time und alle zehn Level das große Hubbell-Fest.
+- Jeder Level-Aufstieg wird gefeiert: Konfetti, Pyro-Show, Moshpit, Lightshow und alle zehn Level das große Hubbell-Fest.
 
 Der Spielstand und die Rekorde werden lokal auf dem Gerät gespeichert.
 

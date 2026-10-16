@@ -82,7 +82,7 @@ private fun TitleScreen(vm: GameViewModel) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(
-                    "Hubbell sitzt in seiner Stammkneipe und will auf keinen Fall nüchtern werden. " +
+                    "Hubbell, der sympathischste Metaller der Stadt, sitzt in seiner Metal-Bar und will auf keinen Fall nüchtern werden. " +
                         "Tippe, um ihm ein Getränk zu bringen, und kauf im Shop bessere Tropfen. " +
                         "Fällt sein Pegel auf null, hast du 10 Sekunden, um ihn zu retten!",
                     color = PubColors.Cream,
