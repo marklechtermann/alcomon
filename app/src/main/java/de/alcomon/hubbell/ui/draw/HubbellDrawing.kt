@@ -79,6 +79,9 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
         drawDrink(next, Offset(cx + 28.5f * u, tableTop - 15f * u), 10f * u, 16f * u, 1f)
     }
 
+    // Gäste, die ab und zu von unten ins Bild hüpfen
+    drawCameos(pose.time, u)
+
     if (pose.alarm) {
         val pulse = 0.35f + 0.25f * sin(pose.time * 8f)
         drawRect(
@@ -90,18 +93,6 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
         )
     }
 }
-
-private class Poster(
-    val x: Float, val y: Float, val w: Float, val h: Float, val tilt: Float,
-    val background: Color, val ink: Color, val band: String, val motif: Int,
-)
-
-private val Posters = listOf(
-    Poster(0.04f, 0.05f, 0.24f, 0.2f, -9f, Color(0xFF1B1B1B), Color(0xFFE0E0E0), "BIERZERKER", 0),
-    Poster(0.7f, 0.04f, 0.26f, 0.18f, 7f, Color(0xFF7A1010), Color(0xFFFFD27A), "IRON LEBER", 1),
-    Poster(0.02f, 0.41f, 0.2f, 0.14f, 12f, Color(0xFF2C3E50), Color(0xFF9FD3E8), "HOPFENTOD", 2),
-    Poster(0.77f, 0.42f, 0.21f, 0.13f, -6f, Color(0xFF3B2A12), Color(0xFFF2B32A), "THRASH TRESEN", 0),
-)
 
 /** Dunkle Metal-Bar mit Backsteinwand, schiefen Bandpostern und rotem Neonlicht. */
 fun DrawScope.drawMetalBar(time: Float) {
@@ -137,9 +128,6 @@ fun DrawScope.drawMetalBar(time: Float) {
         center = Offset(w * 0.5f, 0f),
     )
 
-    // Theke unten
-    drawRect(Color(0xFF1A1416), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.4f))
-    drawRect(Color(0xFF5C5F66), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.012f))
 
     // Regal mit Flaschen
     val shelfY = h * 0.34f
@@ -158,7 +146,12 @@ fun DrawScope.drawMetalBar(time: Float) {
     }
     drawRect(Color(0xFF3A3A40), topLeft = Offset(w * 0.03f, shelfY), size = Size(w * 0.94f, h * 0.018f))
 
-    Posters.forEach { drawPoster(it, time) }
+    // Poster, die ständig von wechselnden Metallern ausgetauscht werden
+    drawPosterWall(time, floorY = h * 0.6f)
+
+    // Theke unten
+    drawRect(Color(0xFF1A1416), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.4f))
+    drawRect(Color(0xFF5C5F66), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.012f))
 
     // Neon-Schild
     drawIntoCanvas { canvas ->
@@ -173,65 +166,7 @@ fun DrawScope.drawMetalBar(time: Float) {
     }
 }
 
-private fun DrawScope.drawPoster(p: Poster, time: Float) {
-    val w = size.width
-    val h = size.height
-    val left = p.x * w
-    val top = p.y * h
-    val pw = p.w * w
-    val ph = p.h * h
-    // leichtes Wackeln, als hänge es nur an einem Nagel
-    val tilt = p.tilt + sin(time * 0.8f + p.x * 10f) * 0.6f
-    rotate(tilt, pivot = Offset(left + pw / 2f, top)) {
-        drawRect(Color(0x55000000), topLeft = Offset(left + pw * 0.04f, top + ph * 0.05f), size = Size(pw, ph))
-        drawRect(p.background, topLeft = Offset(left, top), size = Size(pw, ph))
-        drawRect(p.ink.copy(alpha = 0.6f), topLeft = Offset(left, top), size = Size(pw, ph), style = Stroke(pw * 0.02f))
-        val c = Offset(left + pw / 2f, top + ph * 0.6f)
-        val r = min(pw, ph) * 0.22f
-        when (p.motif) {
-            0 -> drawSkull(c, r, p.ink, Color(0xFF111111))
-            1 -> { // Blitz
-                val bolt = Path().apply {
-                    moveTo(c.x + r * 0.3f, c.y - r)
-                    lineTo(c.x - r * 0.5f, c.y + r * 0.1f)
-                    lineTo(c.x, c.y + r * 0.1f)
-                    lineTo(c.x - r * 0.3f, c.y + r)
-                    lineTo(c.x + r * 0.5f, c.y - r * 0.15f)
-                    lineTo(c.x, c.y - r * 0.15f)
-                    close()
-                }
-                drawPath(bolt, p.ink)
-            }
-            else -> { // Flammen
-                for (i in -2..2) {
-                    val fx = c.x + i * r * 0.45f
-                    val flame = Path().apply {
-                        moveTo(fx - r * 0.25f, c.y + r * 0.8f)
-                        quadraticBezierTo(fx - r * 0.35f, c.y - r * 0.1f, fx, c.y - r * (0.6f + 0.2f * abs(i % 2)))
-                        quadraticBezierTo(fx + r * 0.35f, c.y - r * 0.1f, fx + r * 0.25f, c.y + r * 0.8f)
-                        close()
-                    }
-                    drawPath(flame, p.ink.copy(alpha = 0.85f))
-                }
-            }
-        }
-        drawIntoCanvas { canvas ->
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                textAlign = Paint.Align.CENTER
-                typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
-                color = p.ink.toArgb()
-                textSize = ph * 0.2f
-                textScaleX = 0.85f
-            }
-            while (paint.measureText(p.band) > pw * 0.9f && paint.textSize > 4f) paint.textSize *= 0.92f
-            canvas.nativeCanvas.drawText(p.band, left + pw / 2f, top + ph * 0.26f, paint)
-        }
-        // Klebestreifen
-        drawRect(Color(0x99E8E0C8), topLeft = Offset(left + pw * 0.4f, top - ph * 0.04f), size = Size(pw * 0.2f, ph * 0.08f))
-    }
-}
-
-private fun DrawScope.drawSkull(c: Offset, r: Float, bone: Color, holes: Color) {
+internal fun DrawScope.drawSkull(c: Offset, r: Float, bone: Color, holes: Color) {
     drawCircle(bone, r, c)
     drawRoundRect(bone, topLeft = Offset(c.x - r * 0.55f, c.y + r * 0.5f), size = Size(r * 1.1f, r * 0.75f), cornerRadius = CornerRadius(r * 0.2f))
     drawCircle(holes, r * 0.28f, Offset(c.x - r * 0.4f, c.y + r * 0.05f))
