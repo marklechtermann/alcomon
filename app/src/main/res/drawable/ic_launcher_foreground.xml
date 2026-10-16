@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Henkel -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFF3D6"
+        android:strokeWidth="5"
+        android:pathData="M64,50 C77,50 77,71 63,71" />
+    <!-- Krug -->
+    <path
+        android:fillColor="#F2B32A"
+        android:pathData="M37,42 L66,42 L63,80 L40,80 Z" />
+    <path
+        android:fillColor="#FFE08A"
+        android:pathData="M45,58 m-2,0 a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0 M55,66 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0 M50,73 m-1.5,0 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0" />
+    <!-- Schaum -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,46 C32,37 40,33 45,36 C47,30 57,30 59,35 C64,32 71,37 68,46 Z" />
+</vector>

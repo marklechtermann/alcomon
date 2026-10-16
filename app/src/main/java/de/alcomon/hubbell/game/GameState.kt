@@ -1,0 +1,43 @@
+package de.alcomon.hubbell.game
+
+data class GameState(
+    val pegel: Float = GameEngine.START_PEGEL,
+    val level: Int = 1,
+    val xp: Float = 0f,
+    val coins: Int = 0,
+    val drinksServed: Int = 0,
+    val elapsedSeconds: Float = 0f,
+    val unlocked: Set<Drink> = setOf(Drink.HELLES),
+    val selected: Drink = Drink.HELLES,
+    val upgrades: Map<Upgrade, Int> = emptyMap(),
+    val drinking: Drink? = null,
+    val drinkRemaining: Float = 0f,
+    /** Restzeit der Rettungsfrist, `null` solange der Pegel über null ist. */
+    val rescueSecondsLeft: Float? = null,
+    val gameOver: Boolean = false,
+    val waitressTimer: Float = 0f,
+    /** Erreichte Level, deren Belohnungs-Animation noch abgespielt werden muss. */
+    val pendingRewards: List<Int> = emptyList(),
+) {
+    fun upgradeLevel(upgrade: Upgrade): Int = upgrades[upgrade] ?: 0
+
+    val inRescue: Boolean get() = rescueSecondsLeft != null
+
+    val drinkProgress: Float
+        get() {
+            val drink = drinking ?: return 0f
+            return (1f - drinkRemaining / GameEngine.drinkDuration(this, drink)).coerceIn(0f, 1f)
+        }
+
+    val levelProgress: Float get() = (xp / GameEngine.xpForNextLevel(level)).coerceIn(0f, 1f)
+
+    val mood: Mood
+        get() = when {
+            inRescue || pegel < 20f -> Mood.NUECHTERN
+            pegel < 50f -> Mood.MAESSIG
+            pegel < 80f -> Mood.FROH
+            else -> Mood.SELIG
+        }
+}
+
+enum class Mood { NUECHTERN, MAESSIG, FROH, SELIG }

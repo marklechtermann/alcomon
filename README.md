@@ -1,0 +1,32 @@
+# Hubbell
+
+Ein kleines Android-Spiel: Hubbell sitzt in seiner Stammkneipe und will auf keinen Fall nüchtern werden.
+
+## Spielprinzip
+
+- Oben siehst du Hubbells **Alkoholpegel**. Er sinkt ständig, und mit jedem Level schneller.
+- **Tippe auf Hubbell** (oder auf „Prost!“), um ihm ein Getränk zu bringen. Jedes Getränk bringt Pegel, Erfahrung und Taler.
+- Im **Upgrade-Shop** schaltest du ab bestimmten Leveln stärkere Getränke frei: Helles → Weizen → Stout → Rotwein → Whisky → Hubbell-Spezial.
+  Dazu gibt es Verbesserungen wie den Turbo-Zapfhahn, Spendierhosen, die Eiserne Leber und Kellnerin Gerda, die automatisch serviert.
+- Ab 80 % Pegel hat Hubbell beste Laune und es gibt doppelte Taler.
+- Fällt der Pegel auf **null**, bleiben dir **10 Sekunden**, um ihn mit einem Getränk zu retten. Sonst ist das Spiel vorbei.
+- Jeder Level-Aufstieg wird gefeiert: Konfetti, Feuerwerk, die ganze Kneipe feiert mit, Disco-Time und alle zehn Level das große Hubbell-Fest.
+
+Der Spielstand und die Rekorde werden lokal auf dem Gerät gespeichert.
+
+## Bauen
+
+Voraussetzungen: JDK 17 und das Android SDK (z. B. über Android Studio).
+
+```sh
+./gradlew assembleDebug        # APK unter app/build/outputs/apk/debug/
+./gradlew testDebugUnitTest    # Tests der Spiellogik
+```
+
+Jeder Push baut die Debug-APK außerdem in GitHub Actions; sie liegt dort als Artefakt `hubbell-debug-apk` zum Download bereit.
+
+## Aufbau
+
+- `game/` – reine Spiellogik ohne Android-Abhängigkeiten (Getränke, Upgrades, Pegel, Belohnungen)
+- `data/` – Speichern von Spielstand und Rekorden
+- `ui/` – Jetpack-Compose-Oberfläche; alle Grafiken werden im Code gezeichnet (`ui/draw/`)

@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Hubbell" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/pub_dark</item>
+        <item name="android:statusBarColor">@color/pub_dark</item>
+        <item name="android:navigationBarColor">@color/pub_dark</item>
+    </style>
+</resources>
