@@ -12,6 +12,10 @@ Ein kleines Android-Spiel: Hubbell, ein sympathischer Metaller mit langer Mähne
 - Fällt der Pegel auf **null**, bleiben dir **10 Sekunden**, um ihn mit einem Getränk zu retten. Sonst ist das Spiel vorbei.
 - Jeder Level-Aufstieg wird gefeiert: Konfetti, Pyro-Show, Moshpit, Lightshow und alle zehn Level das große Hubbell-Fest.
 
+Im Hintergrund tauschen zehn verschiedene Metaller ständig die Poster von 50 erfundenen Bands aus, und im Vordergrund hüpfen immer wieder Gäste ins Bild und rufen etwas rein.
+
+Alle Sounds (Gitarrenriffs mit Schlagzeug, Anstoßen, Kasse, Alarm) werden im Code synthetisiert; oben im Bild lässt sich der Ton abschalten.
+
 Der Spielstand und die Rekorde werden lokal auf dem Gerät gespeichert.
 
 ## Bauen

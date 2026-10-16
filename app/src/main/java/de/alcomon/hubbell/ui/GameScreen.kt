@@ -79,7 +79,7 @@ fun GameScreen(vm: GameViewModel) {
 
     Box(Modifier.fillMaxSize().background(PubColors.WoodDark)) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            TopHud(s, time)
+            TopHud(s, time, vm.soundOn, vm::toggleSound)
             Box(
                 Modifier
                     .weight(1f)
@@ -154,13 +154,19 @@ fun GameScreen(vm: GameViewModel) {
 }
 
 @Composable
-private fun TopHud(s: GameState, time: () -> Float) {
+private fun TopHud(s: GameState, time: () -> Float, soundOn: Boolean, onToggleSound: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(PubColors.Panel).padding(horizontal = 14.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Level ${s.level}", color = PubColors.Gold, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
                 Text(Rewards.titleFor(s.level), color = PubColors.Cream, fontSize = 13.sp)
             }
+            Text(
+                if (soundOn) "🔊" else "🔇",
+                fontSize = 22.sp,
+                modifier = Modifier.clip(CircleShape).clickable(onClick = onToggleSound).padding(8.dp),
+            )
+            Spacer(Modifier.width(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CoinIcon(20.dp)
                 Spacer(Modifier.width(6.dp))

@@ -75,6 +75,12 @@ class SaveStore(context: Context) {
             .apply()
     }
 
+    var soundOn: Boolean
+        get() = prefs.getBoolean("sound.on", true)
+        set(value) {
+            prefs.edit().putBoolean("sound.on", value).apply()
+        }
+
     private companion object {
         const val KEY_RUN = "run.exists"
     }

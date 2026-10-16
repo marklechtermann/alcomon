@@ -5,12 +5,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import de.alcomon.hubbell.audio.Sfx
+import de.alcomon.hubbell.audio.SoundPlayer
 import de.alcomon.hubbell.data.SaveStore
 import de.alcomon.hubbell.game.Drink
 import de.alcomon.hubbell.game.GameEngine
 import de.alcomon.hubbell.game.GameState
 import de.alcomon.hubbell.game.RunResult
 import de.alcomon.hubbell.game.Upgrade
+import kotlin.math.ceil
+import kotlin.random.Random
 
 enum class Screen { TITLE, GAME }
 
@@ -33,6 +37,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     var lastResult by mutableStateOf<RunResult?>(null)
         private set
 
+    private val sound = SoundPlayer().also { it.enabled = store.soundOn }
+    var soundOn by mutableStateOf(store.soundOn)
+        private set
+    private var riffTimer = nextRiffDelay()
+
     private var nextFloaterId = 0L
     private var sinceSave = 0f
 
@@ -51,6 +60,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             addFloater("Gerda: +${after.coins - before.coins} Taler")
         }
         state = after
+        playEventSounds(before, after, dt)
 
         if (after.gameOver) {
             onGameOver(after)
@@ -67,19 +77,55 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (after === before) return
         state = after
         addFloater("+${after.coins - before.coins} Taler")
+        sound.play(if (after.level > before.level) Sfx.LEVEL_UP else Sfx.PROST)
     }
+
+    fun toggleSound() {
+        soundOn = !soundOn
+        store.soundOn = soundOn
+        sound.enabled = soundOn
+    }
+
+    private fun playEventSounds(before: GameState, after: GameState, dt: Float) {
+        when {
+            after.gameOver -> sound.play(Sfx.GAME_OVER)
+            after.level > before.level -> sound.play(Sfx.LEVEL_UP)
+            after.drinksServed > before.drinksServed -> sound.play(Sfx.PROST)
+        }
+        val rescueBefore = before.rescueSecondsLeft
+        val rescueAfter = after.rescueSecondsLeft
+        if (rescueAfter != null && !after.gameOver &&
+            (rescueBefore == null || ceil(rescueAfter) < ceil(rescueBefore))
+        ) {
+            sound.play(Sfx.ALARM)
+        }
+        // Ab und zu ein Gitarrenriff, solange Hubbell gut drauf ist
+        riffTimer -= dt
+        if (riffTimer <= 0f) {
+            riffTimer = nextRiffDelay()
+            if (!after.inRescue && after.drinking == null) {
+                sound.play(listOf(Sfx.RIFF_1, Sfx.RIFF_2, Sfx.RIFF_3).random())
+            }
+        }
+    }
+
+    private fun nextRiffDelay(): Float = 20f + Random.nextFloat() * 20f
 
     fun select(drink: Drink) {
         state = GameEngine.select(state, drink)
     }
 
     fun buyDrink(drink: Drink) {
+        val before = state
         state = GameEngine.buyDrink(state, drink)
+        if (state !== before) sound.play(Sfx.KASSE)
         save()
     }
 
     fun buyUpgrade(upgrade: Upgrade) {
+        val before = state
         state = GameEngine.buyUpgrade(state, upgrade)
+        if (state !== before) sound.play(Sfx.KASSE)
         save()
     }
 
@@ -103,6 +149,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         lastResult = null
         shopOpen = false
         screen = Screen.GAME
+        riffTimer = nextRiffDelay()
+        sound.play(Sfx.RIFF_1)
         save()
     }
 
@@ -131,6 +179,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         lastResult = result
         store.saveStats(updated)
         store.clearRun()
+    }
+
+    override fun onCleared() {
+        sound.release()
     }
 
     private fun addFloater(text: String) {
