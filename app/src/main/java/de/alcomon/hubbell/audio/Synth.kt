@@ -9,7 +9,7 @@ import kotlin.math.tanh
 import kotlin.random.Random
 
 /** Die Soundeffekte des Spiels. Alles wird im Code erzeugt, es gibt keine Audiodateien. */
-enum class Sfx { PROST, KASSE, LEVEL_UP, ALARM, GAME_OVER, RIFF_1, RIFF_2, RIFF_3 }
+enum class Sfx { PROST, KASSE, LEVEL_UP, ALARM, GAME_OVER, RIFF_1, RIFF_2, RIFF_3, SCHNURR, FANG }
 
 /**
  * Ein kleiner Synthesizer für verzerrte Gitarrenriffs, Schlagzeug und Effekte.
@@ -32,6 +32,8 @@ object Synth {
         Sfx.RIFF_1 -> toPcm(riff(Riff1, bpm = 150, drums = true))
         Sfx.RIFF_2 -> toPcm(riff(Riff2, bpm = 120, drums = true))
         Sfx.RIFF_3 -> toPcm(riff(Riff3, bpm = 180, drums = true))
+        Sfx.SCHNURR -> toPcm(purr())
+        Sfx.FANG -> toPcm(pop())
     }
 
     /** Ein Riff-Ton: Halbtöne über dem tiefen E, Länge in Achteln, abgedämpft oder offen. */
@@ -186,6 +188,37 @@ object Synth {
             square * exp(-t * 6f)
         }
         normalize(out, 0.35f)
+        return out
+    }
+
+    /** Zufriedenes Brummen, wenn Hubbell gestreichelt wird. */
+    private fun purr(): FloatArray {
+        val samples = (0.6f * SAMPLE_RATE).toInt()
+        var phase = 0f
+        val out = FloatArray(samples) { i ->
+            val t = i.toFloat() / SAMPLE_RATE
+            val f = 140f + 60f * (t / 0.6f)
+            phase += f / SAMPLE_RATE
+            val tremolo = 0.6f + 0.4f * sin(2f * PI.toFloat() * 22f * t)
+            val env = (t / 0.05f).coerceAtMost(1f) * ((0.6f - t) / 0.15f).coerceIn(0f, 1f)
+            tanh(sin(2f * PI.toFloat() * phase) * 2f) * tremolo * env
+        }
+        normalize(out, 0.45f)
+        return out
+    }
+
+    /** Kurzes Plopp mit Glitzer, wenn man etwas Herabfallendes fängt. */
+    private fun pop(): FloatArray {
+        val samples = (0.4f * SAMPLE_RATE).toInt()
+        var phase = 0f
+        val out = FloatArray(samples) { i ->
+            val t = i.toFloat() / SAMPLE_RATE
+            val f = 400f + 1400f * (t / 0.4f)
+            phase += f / SAMPLE_RATE
+            sin(2f * PI.toFloat() * phase) * exp(-t * 7f) +
+                0.3f * sin(2f * PI.toFloat() * 2637f * t) * exp(-((t - 0.12f) * 20f).let { it * it })
+        }
+        normalize(out, 0.45f)
         return out
     }
 

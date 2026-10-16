@@ -30,9 +30,9 @@ private val Skin = Color(0xFFF5C9A0)
 private val SkinShade = Color(0xFFE3AE80)
 private val Shirt = Color(0xFF1C1C1F)
 private val ShirtPrint = Color(0xFFE8E4DA)
-private val Hair = Color(0xFF2A1D16)
-private val HairLight = Color(0xFF3D2B20)
-private val Beard = Color(0xFF3A2A1E)
+private val Hair = Color(0xFF151515)
+private val HairLight = Color(0xFF353535)
+private val Beard = Color(0xFF1B1B1B)
 private val Wristband = Color(0xFF111111)
 private val Stud = Color(0xFFB0B4BA)
 private val Ink = Color(0xFF2B1A12)
@@ -46,7 +46,25 @@ data class HubbellPose(
     val nextDrink: Drink?,
     val time: Float,
     val alarm: Boolean = false,
+    /** Wie lange die aktuelle Runde schon läuft; Hubbells Gesicht verändert sich damit. */
+    val runSeconds: Float = 0f,
+    /** Wie lange er das Streicheln noch genießt. */
+    val petGlow: Float = 0f,
+    val startled: Boolean = false,
+    val dizzy: Boolean = false,
 )
+
+/** Wo Hubbells Kopf sitzt (für Streicheln und Würfe). */
+fun hubbellHead(width: Float, height: Float): Pair<Offset, Float> {
+    val u = min(width / 100f, height / 118f)
+    return Offset(width / 2f, height * 0.74f - 41f * u) to u
+}
+
+private fun rotateAround(p: Offset, pivot: Offset, degrees: Float): Offset {
+    val a = degrees * PI.toFloat() / 180f
+    val d = p - pivot
+    return pivot + Offset(d.x * kotlin.math.cos(a) - d.y * sin(a), d.x * sin(a) + d.y * kotlin.math.cos(a))
+}
 
 /** Kneipe, Stuhl, Hubbell, Tisch und das nächste Getränk. */
 fun DrawScope.drawHubbellScene(pose: HubbellPose) {
@@ -70,7 +88,19 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
         cornerRadius = CornerRadius(3f * u),
     )
 
-    drawHubbell(cx, tableTop, u, pose)
+    // Ab und zu fliegt etwas auf ihn: dann kippt er vom Stuhl oder erschrickt
+    val knock = knockAt(pose.time)
+    val fall = knock?.fall ?: 0f
+    val startle = knock?.startle ?: 0f
+    val fallPivot = Offset(cx - 24f * u, tableTop + 10f * u)
+    val fallAngle = -78f * fall
+    val lift = -7f * u * startle + if (startle > 0f) sin(pose.time * 70f) * 0.7f * u * startle else 0f
+    val drop = 16f * u * fall
+    translate(0f, drop + lift) {
+        rotate(fallAngle, pivot = fallPivot) {
+            drawHubbell(cx, tableTop, u, pose.copy(startled = startle > 0.3f, dizzy = fall > 0.6f))
+        }
+    }
     drawTable(tableTop, u)
 
     val next = pose.nextDrink
@@ -81,6 +111,13 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
 
     // Gäste, die ab und zu von unten ins Bild hüpfen
     drawCameos(pose.time, u)
+
+    if (knock != null) {
+        val seated = Offset(cx, tableTop - 41f * u)
+        val now = rotateAround(seated, fallPivot, fallAngle) + Offset(0f, drop + lift)
+        drawThrownObject(knock, seated, u)
+        drawKnockReaction(knock, now, u, pose.time)
+    }
 
     if (pose.alarm) {
         val pulse = 0.35f + 0.25f * sin(pose.time * 8f)
@@ -302,6 +339,18 @@ private fun DrawScope.drawHubbell(cx: Float, tableTop: Float, u: Float, pose: Hu
     }
 }
 
+private fun DrawScope.drawHeart(c: Offset, r: Float, color: Color) {
+    drawCircle(color, r * 0.55f, c + Offset(-r * 0.45f, 0f))
+    drawCircle(color, r * 0.55f, c + Offset(r * 0.45f, 0f))
+    val tip = Path().apply {
+        moveTo(c.x - r * 0.98f, c.y + r * 0.15f)
+        lineTo(c.x + r * 0.98f, c.y + r * 0.15f)
+        lineTo(c.x, c.y + r * 1.1f)
+        close()
+    }
+    drawPath(tip, color)
+}
+
 /** Kurzer schwarzer Ärmel, nackter Unterarm und Nietenarmband. */
 private fun DrawScope.drawArm(shoulder: Offset, hand: Offset, u: Float) {
     val sleeveEnd = lerp(shoulder, hand, 0.3f)
@@ -380,7 +429,18 @@ private fun DrawScope.drawHead(
     }
 
     // Augen
-    if (pose.drinking != null || pose.pegel >= 80f || rocking) {
+    if (pose.dizzy) {
+        for (sx in listOf(-1f, 1f)) {
+            val e = Offset(cx + sx * ex, eyeY)
+            drawLine(Ink, e + Offset(-2f * u, -2f * u), e + Offset(2f * u, 2f * u), strokeWidth = 1.3f * u, cap = StrokeCap.Round)
+            drawLine(Ink, e + Offset(-2f * u, 2f * u), e + Offset(2f * u, -2f * u), strokeWidth = 1.3f * u, cap = StrokeCap.Round)
+        }
+    } else if (pose.startled) {
+        for (sx in listOf(-1f, 1f)) {
+            drawCircle(Color.White, 3.6f * u, Offset(cx + sx * ex, eyeY - 0.5f * u))
+            drawCircle(Ink, 0.8f * u, Offset(cx + sx * ex, eyeY - 0.5f * u))
+        }
+    } else if (pose.drinking != null || pose.pegel >= 80f || rocking || pose.petGlow > 0f) {
         for (sx in listOf(-1f, 1f)) {
             drawArc(
                 Ink, startAngle = 180f, sweepAngle = 180f, useCenter = false,
@@ -403,19 +463,40 @@ private fun DrawScope.drawHead(
         }
     }
 
+    // Je länger die Runde läuft, desto mehr sieht man sie ihm an
+    val age = (pose.runSeconds / 600f).coerceIn(0f, 1f)
+    if (pose.runSeconds > 120f) {
+        for (sx in listOf(-1f, 1f)) {
+            drawArc(
+                Color(0x557A4E2D), startAngle = 20f, sweepAngle = 140f, useCenter = false,
+                topLeft = Offset(cx + sx * ex - 2.6f * u, eyeY + 1.2f * u), size = Size(5.2f * u, 2.6f * u),
+                style = Stroke(0.7f * u, cap = StrokeCap.Round),
+            )
+        }
+    }
+    if (pose.runSeconds > 60f) {
+        // Bartstoppeln wandern die Wangen hoch
+        val stubble = ((pose.runSeconds - 60f) / 300f).coerceIn(0f, 1f)
+        for (i in 0 until (6 + 14 * stubble).toInt()) {
+            val sx = if (i % 2 == 0) -1f else 1f
+            val row = i / 2
+            drawCircle(Beard.copy(alpha = 0.55f), 0.35f * u, Offset(cx + sx * (8f + (row % 3) * 1.6f) * u, headY + (6.5f - row * 0.5f) * u))
+        }
+    }
+
     // Rote Bäckchen – je höher der Pegel, desto röter
-    val cheek = Color(0xFFE0565B).copy(alpha = 0.12f + 0.5f * p)
+    val cheek = Color(0xFFE0565B).copy(alpha = 0.12f + 0.5f * p + if (pose.petGlow > 0f) 0.25f else 0f)
     drawCircle(cheek, 3.4f * u, Offset(cx - 9.5f * u, headY + 3.5f * u))
     drawCircle(cheek, 3.4f * u, Offset(cx + 9.5f * u, headY + 3.5f * u))
 
     // Fusseliger Kinnbart
     val chin = listOf(-7f to 9.5f, -4.5f to 12f, -1.5f to 13.5f, 1.5f to 13.5f, 4.5f to 12f, 7f to 9.5f)
-    chin.forEach { (dx, dy) -> drawCircle(Beard, 3.1f * u, Offset(cx + dx * u, headY + dy * u)) }
+    chin.forEach { (dx, dy) -> drawCircle(Beard, 3.1f * u * (1f + 0.35f * age), Offset(cx + dx * u, headY + (dy + 1.5f * age) * u)) }
     val goatee = Path().apply {
         moveTo(cx - 4f * u, headY + 14f * u)
         lineTo(cx + 4f * u, headY + 14f * u)
-        lineTo(cx + 1f * u, headY + 21f * u)
-        lineTo(cx - 1.5f * u, headY + 20f * u)
+        lineTo(cx + 1f * u, headY + (21f + 7f * age) * u)
+        lineTo(cx - 1.5f * u, headY + (20f + 7f * age) * u)
         close()
     }
     drawPath(goatee, Beard)
@@ -427,7 +508,7 @@ private fun DrawScope.drawHead(
     }
 
     // Knollennase
-    drawCircle(lerp(SkinShade, Color(0xFFE0565B), p), 3.9f * u, Offset(cx, headY + 2f * u))
+    drawCircle(lerp(SkinShade, Color(0xFFE0565B), max(p, age * 0.8f)), 3.9f * u * (1f + 0.25f * age), Offset(cx, headY + 2f * u))
     drawCircle(Color(0x66FFFFFF), 1.1f * u, Offset(cx - 1.2f * u, headY + 0.8f * u))
 
     // Mund
@@ -462,6 +543,31 @@ private fun DrawScope.drawHead(
     drawOval(Beard, topLeft = Offset(cx, headY + 4.4f * u), size = Size(8f * u, 3f * u))
     drawLine(Beard, Offset(cx - 7.5f * u, headY + 6.5f * u), Offset(cx - 9f * u, headY + 8.5f * u), strokeWidth = 1f * u, cap = StrokeCap.Round)
     drawLine(Beard, Offset(cx + 7.5f * u, headY + 6.5f * u), Offset(cx + 9f * u, headY + 8.5f * u), strokeWidth = 1f * u, cap = StrokeCap.Round)
+
+    // Nach einer Weile steht die Mähne wild ab, später klebt ein Pflaster auf der Stirn
+    if (pose.runSeconds > 240f) {
+        val wild = ((pose.runSeconds - 240f) / 240f).coerceIn(0f, 1f)
+        for (i in -2..2) {
+            val root = Offset(cx + i * 4f * u, headY - 15f * u + abs(i) * 1.2f * u)
+            drawLine(Hair, root, root + Offset(i * 1.5f * u, -(2f + 3f * wild) * u), strokeWidth = 1.2f * u, cap = StrokeCap.Round)
+        }
+    }
+    if (pose.runSeconds > 480f) {
+        rotate(-25f, pivot = Offset(cx + 6f * u, headY - 7f * u)) {
+            drawRoundRect(Color(0xFFE8C9A0), topLeft = Offset(cx + 2f * u, headY - 8f * u), size = Size(8f * u, 2.4f * u), cornerRadius = CornerRadius(1f * u))
+            drawRect(Color(0xFFF5E6D0), topLeft = Offset(cx + 5f * u, headY - 8f * u), size = Size(2f * u, 2.4f * u))
+        }
+    }
+
+    // Herzchen, wenn er gestreichelt wird
+    if (pose.petGlow > 0f) {
+        val rise = 1f - (pose.petGlow / 1.5f).coerceIn(0f, 1f)
+        for (i in 0..2) {
+            val hx = cx + (i - 1) * 9f * u + sin(pose.time * 3f + i) * 1.5f * u
+            val hy = headY - 22f * u - rise * 12f * u - i * 2f * u
+            drawHeart(Offset(hx, hy), 2.4f * u, Color(0xFFFF4D6D).copy(alpha = (pose.petGlow / 0.5f).coerceIn(0f, 1f)))
+        }
+    }
 
     // Angstschweiß, wenn er nüchtern wird
     if (sober) {

@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.translate
 import de.alcomon.hubbell.game.Drink
+import de.alcomon.hubbell.game.Glass
 
 private val GlassFill = Color(0x40FFFFFF)
 private val GlassEdge = Color(0xCCFFFFFF)
@@ -24,13 +25,18 @@ private val Foam = Color(0xFFFFFBF0)
 fun DrawScope.drawDrink(drink: Drink, topLeft: Offset, w: Float, h: Float, fill: Float) {
     val f = fill.coerceIn(0f, 1f)
     translate(topLeft.x, topLeft.y) {
-        when (drink) {
-            Drink.HELLES -> beerGlass(w, h, f, Color(0xFFF2B32A), Foam, bulge = false)
-            Drink.WEIZEN -> wheatGlass(w, h, f)
-            Drink.STOUT -> beerGlass(w, h, f, Color(0xFF2B1A12), Color(0xFFEAD9B8), bulge = true)
-            Drink.WEIN -> wineGlass(w, h, f)
-            Drink.WHISKY -> tumbler(w, h, f)
-            Drink.SPEZIAL -> cocktail(w, h, f)
+        val liquidColor = Color(drink.liquid)
+        val foamColor = drink.foam?.let { Color(it) } ?: Foam
+        when (drink.glass) {
+            Glass.BEER -> beerGlass(w, h, f, liquidColor, foamColor, bulge = false)
+            Glass.PINT -> beerGlass(w, h, f, liquidColor, foamColor, bulge = true)
+            Glass.WHEAT -> wheatGlass(w, h, f, liquidColor)
+            Glass.MUG -> mug(w, h, f, liquidColor, foamColor)
+            Glass.HORN -> horn(w, h, f, liquidColor)
+            Glass.WINE -> wineGlass(w, h, f, liquidColor)
+            Glass.TUMBLER -> tumbler(w, h, f, liquidColor, ice = drink != Drink.RUM)
+            Glass.SHOT -> shot(w, h, f, liquidColor)
+            Glass.COCKTAIL -> cocktail(w, h, f, liquidColor, foamColor)
         }
     }
 }
@@ -81,7 +87,7 @@ private fun DrawScope.beerGlass(w: Float, h: Float, f: Float, beer: Color, foam:
     drawLine(Color(0x66FFFFFF), Offset(w * 0.25f, h * 0.15f), Offset(w * 0.3f, h * 0.85f), strokeWidth = w * 0.06f, cap = StrokeCap.Round)
 }
 
-private fun DrawScope.wheatGlass(w: Float, h: Float, f: Float) {
+private fun DrawScope.wheatGlass(w: Float, h: Float, f: Float, color: Color) {
     val path = Path().apply {
         moveTo(w * 0.32f, h)
         lineTo(w * 0.68f, h)
@@ -92,7 +98,7 @@ private fun DrawScope.wheatGlass(w: Float, h: Float, f: Float) {
         cubicTo(w * 0.4f, h * 0.55f, w * 0.24f, h * 0.72f, w * 0.32f, h)
         close()
     }
-    val level = liquid(path, h * 0.16f, h, f, Color(0xFFE8962C), w)
+    val level = liquid(path, h * 0.16f, h, f, color, w)
     if (f > 0.05f) {
         clipPath(path) {
             drawRect(Foam, topLeft = Offset(0f, level - h * 0.03f), size = Size(w, h * 0.16f))
@@ -106,7 +112,7 @@ private fun DrawScope.wheatGlass(w: Float, h: Float, f: Float) {
     glassOutline(path, w)
 }
 
-private fun DrawScope.wineGlass(w: Float, h: Float, f: Float) {
+private fun DrawScope.wineGlass(w: Float, h: Float, f: Float, color: Color) {
     val bowlBottom = h * 0.55f
     val bowl = Path().apply {
         moveTo(w * 0.12f, 0f)
@@ -115,13 +121,13 @@ private fun DrawScope.wineGlass(w: Float, h: Float, f: Float) {
         cubicTo(w * 0.32f, bowlBottom, w * 0.05f, h * 0.42f, w * 0.12f, 0f)
         close()
     }
-    liquid(bowl, h * 0.18f, bowlBottom, f, Color(0xFF8E1B2E), w)
+    liquid(bowl, h * 0.18f, bowlBottom, f, color, w)
     glassOutline(bowl, w)
     drawLine(GlassEdge, Offset(w * 0.5f, bowlBottom), Offset(w * 0.5f, h * 0.94f), strokeWidth = w * 0.07f)
     drawOval(GlassEdge, topLeft = Offset(w * 0.2f, h * 0.9f), size = Size(w * 0.6f, h * 0.1f))
 }
 
-private fun DrawScope.tumbler(w: Float, h: Float, f: Float) {
+private fun DrawScope.tumbler(w: Float, h: Float, f: Float, color: Color, ice: Boolean) {
     val top = h * 0.38f
     val path = Path().apply {
         moveTo(w * 0.06f, top)
@@ -130,8 +136,8 @@ private fun DrawScope.tumbler(w: Float, h: Float, f: Float) {
         lineTo(w * 0.12f, h)
         close()
     }
-    val level = liquid(path, top + h * 0.12f, h * 0.9f, f, Color(0xFFC77B1E), w)
-    if (f > 0.3f) {
+    val level = liquid(path, top + h * 0.12f, h * 0.9f, f, color, w)
+    if (ice && f > 0.3f) {
         rotate(18f, pivot = Offset(w * 0.55f, level + h * 0.04f)) {
             drawRoundRect(
                 Color(0xAAE6F4FF),
@@ -145,7 +151,7 @@ private fun DrawScope.tumbler(w: Float, h: Float, f: Float) {
     drawRect(Color(0x66FFFFFF), topLeft = Offset(w * 0.12f, h * 0.9f), size = Size(w * 0.76f, h * 0.1f))
 }
 
-private fun DrawScope.cocktail(w: Float, h: Float, f: Float) {
+private fun DrawScope.cocktail(w: Float, h: Float, f: Float, top: Color, bottom: Color) {
     val cupTop = h * 0.12f
     val cupBottom = h * 0.6f
     val cup = Path().apply {
@@ -158,7 +164,7 @@ private fun DrawScope.cocktail(w: Float, h: Float, f: Float) {
     if (f > 0.01f) {
         clipPath(cup) {
             drawRect(
-                Brush.verticalGradient(listOf(Color(0xFFFF5FA2), Color(0xFFFFB347)), startY = cupTop, endY = cupBottom),
+                Brush.verticalGradient(listOf(top, bottom), startY = cupTop, endY = cupBottom),
                 topLeft = Offset(0f, level),
                 size = Size(w, cupBottom - level),
             )
@@ -174,4 +180,68 @@ private fun DrawScope.cocktail(w: Float, h: Float, f: Float) {
         topLeft = Offset(w * 0.62f, -h * 0.06f), size = Size(w * 0.46f, h * 0.16f),
     )
     drawCircle(Color(0xFFD7263D), w * 0.09f, Offset(w * 0.32f, cupTop - w * 0.02f))
+}
+
+private fun DrawScope.mug(w: Float, h: Float, f: Float, beer: Color, foam: Color) {
+    // Steinkrug-artiger Glaskrug mit Henkel
+    drawArc(
+        GlassEdge, startAngle = -90f, sweepAngle = 180f, useCenter = false,
+        topLeft = Offset(w * 0.62f, h * 0.25f), size = Size(w * 0.4f, h * 0.45f),
+        style = Stroke(width = w * 0.1f),
+    )
+    val path = Path().apply {
+        moveTo(w * 0.04f, h * 0.08f)
+        lineTo(w * 0.8f, h * 0.08f)
+        lineTo(w * 0.8f, h)
+        lineTo(w * 0.04f, h)
+        close()
+    }
+    val level = liquid(path, h * 0.2f, h, f, beer, w)
+    if (f > 0.05f) {
+        clipPath(path) { drawRect(foam, topLeft = Offset(0f, level - h * 0.02f), size = Size(w, h * 0.12f)) }
+        if (f > 0.92f) {
+            drawCircle(foam, w * 0.16f, Offset(w * 0.2f, level))
+            drawCircle(foam, w * 0.19f, Offset(w * 0.45f, level - h * 0.02f))
+            drawCircle(foam, w * 0.14f, Offset(w * 0.68f, level + h * 0.01f))
+        }
+    }
+    glassOutline(path, w)
+    for (i in 1..2) drawLine(Color(0x55FFFFFF), Offset(w * (0.04f + 0.25f * i), h * 0.2f), Offset(w * (0.04f + 0.25f * i), h * 0.92f), strokeWidth = w * 0.04f)
+}
+
+private fun DrawScope.horn(w: Float, h: Float, f: Float, mead: Color) {
+    // Trinkhorn, gebogen, mit Metallbeschlägen
+    val path = Path().apply {
+        moveTo(w * 0.05f, h * 0.05f)
+        lineTo(w * 0.6f, h * 0.05f)
+        quadraticBezierTo(w * 0.6f, h * 0.7f, w * 0.95f, h * 0.98f)
+        quadraticBezierTo(w * 0.3f, h * 0.85f, w * 0.05f, h * 0.05f)
+        close()
+    }
+    drawPath(path, Color(0xFFEAD9B8))
+    if (f > 0.01f) {
+        clipPath(path) {
+            drawRect(mead, topLeft = Offset(0f, h * 0.05f), size = Size(w * 0.62f, h * 0.06f + h * 0.14f * f))
+        }
+    }
+    drawPath(path, Color(0xFF8D6E63), style = Stroke(width = w * 0.05f))
+    drawLine(Color(0xFFB0B4BA), Offset(w * 0.08f, h * 0.22f), Offset(w * 0.58f, h * 0.22f), strokeWidth = w * 0.07f)
+    drawLine(Color(0xFFB0B4BA), Offset(w * 0.3f, h * 0.6f), Offset(w * 0.68f, h * 0.6f), strokeWidth = w * 0.06f)
+}
+
+private fun DrawScope.shot(w: Float, h: Float, f: Float, color: Color) {
+    val top = h * 0.45f
+    val path = Path().apply {
+        moveTo(w * 0.15f, top)
+        lineTo(w * 0.85f, top)
+        lineTo(w * 0.75f, h)
+        lineTo(w * 0.25f, h)
+        close()
+    }
+    liquid(path, top + h * 0.06f, h * 0.88f, f, color, w)
+    glassOutline(path, w)
+    drawRect(Color(0x66FFFFFF), topLeft = Offset(w * 0.25f, h * 0.88f), size = Size(w * 0.5f, h * 0.12f))
+    // Zuckerwürfel auf dem Löffel, wie es sich für die Grüne Fee gehört
+    drawLine(Color(0xFFB0B4BA), Offset(w * 0.0f, top - h * 0.02f), Offset(w * 1f, top - h * 0.02f), strokeWidth = w * 0.06f)
+    drawRect(Color.White, topLeft = Offset(w * 0.42f, top - h * 0.14f), size = Size(w * 0.18f, h * 0.11f))
 }

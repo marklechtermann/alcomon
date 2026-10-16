@@ -9,6 +9,9 @@ import de.alcomon.hubbell.audio.Sfx
 import de.alcomon.hubbell.audio.SoundPlayer
 import de.alcomon.hubbell.data.SaveStore
 import de.alcomon.hubbell.game.Drink
+import de.alcomon.hubbell.game.Falling
+import de.alcomon.hubbell.game.FallingItem
+import de.alcomon.hubbell.game.FallingKind
 import de.alcomon.hubbell.game.GameEngine
 import de.alcomon.hubbell.game.GameState
 import de.alcomon.hubbell.game.RunResult
@@ -42,6 +45,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         private set
     private var riffTimer = nextRiffDelay()
 
+    var falling by mutableStateOf(emptyList<FallingItem>())
+        private set
+    private var fallingSpawn = Falling.nextSpawnDelay()
+    private var nextFallingId = 0L
+
     private var nextFloaterId = 0L
     private var sinceSave = 0f
 
@@ -61,6 +69,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
         state = after
         playEventSounds(before, after, dt)
+        updateFalling(dt)
 
         if (after.gameOver) {
             onGameOver(after)
@@ -78,6 +87,48 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         state = after
         addFloater("+${after.coins - before.coins} Taler")
         sound.play(if (after.level > before.level) Sfx.LEVEL_UP else Sfx.PROST)
+    }
+
+    /** Ein Tipp in die Szene: erst schauen, ob etwas Herabfallendes getroffen wurde, sonst servieren. */
+    fun tapScene(x: Float, y: Float, width: Float, height: Float) {
+        if (screen != Screen.GAME || shopOpen || state.gameOver) return
+        val radius = minOf(width, height) * 0.11f
+        val hit = falling.firstOrNull { item ->
+            val dx = item.x * width - x
+            val dy = item.y * height - y
+            dx * dx + dy * dy < radius * radius * (if (item.kind == FallingKind.DEINE_MUDDA) 1.8f else 1f)
+        }
+        if (hit == null) {
+            serve()
+            return
+        }
+        falling = falling - hit
+        val before = state
+        val caught = Falling.catch(before, hit.kind)
+        state = caught.state
+        addFloater(caught.text)
+        sound.play(if (state.level > before.level) Sfx.LEVEL_UP else Sfx.FANG)
+    }
+
+    /** Ein Wisch über Hubbells Kopf. */
+    fun pet() {
+        if (screen != Screen.GAME || shopOpen) return
+        val before = state
+        val after = GameEngine.pet(before)
+        if (after === before) return
+        state = after
+        val coins = after.coins - before.coins
+        addFloater(if (after.pets % 5 == 1) "${PetLines.random()} +$coins" else "+$coins Taler ♥")
+        sound.play(if (after.level > before.level) Sfx.LEVEL_UP else Sfx.SCHNURR)
+    }
+
+    private fun updateFalling(dt: Float) {
+        falling = Falling.fall(falling, dt)
+        fallingSpawn -= dt
+        if (fallingSpawn <= 0f) {
+            fallingSpawn = Falling.nextSpawnDelay()
+            falling = falling + Falling.spawn(nextFallingId++)
+        }
     }
 
     fun toggleSound() {
@@ -146,6 +197,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun startNewGame() {
         state = GameState()
         floaters = emptyList()
+        falling = emptyList()
+        fallingSpawn = Falling.nextSpawnDelay()
         lastResult = null
         shopOpen = false
         screen = Screen.GAME
@@ -190,6 +243,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
-        const val FLOATER_LIFETIME = 1.2f
+        const val FLOATER_LIFETIME = 1.4f
+        private val PetLines = listOf("Hach, schön!", "Mehr davon!", "Das tut gut!", "Schnurr …", "Genau da!")
     }
 }

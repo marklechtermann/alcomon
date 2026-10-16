@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -50,7 +51,9 @@ import de.alcomon.hubbell.game.GameState
 import de.alcomon.hubbell.game.Rewards
 import de.alcomon.hubbell.game.RunResult
 import de.alcomon.hubbell.ui.draw.HubbellPose
+import de.alcomon.hubbell.ui.draw.drawFallingItem
 import de.alcomon.hubbell.ui.draw.drawHubbellScene
+import de.alcomon.hubbell.ui.draw.hubbellHead
 import de.alcomon.hubbell.ui.theme.PubColors
 import kotlin.math.ceil
 import kotlin.math.sin
@@ -84,7 +87,24 @@ fun GameScreen(vm: GameViewModel) {
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(Unit) { detectTapGestures(onTap = { vm.serve() }) },
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { pos -> vm.tapScene(pos.x, pos.y, size.width.toFloat(), size.height.toFloat()) })
+                    }
+                    .pointerInput(Unit) {
+                        // Über den Kopf wischen = streicheln
+                        var stroke = 0f
+                        detectDragGestures(onDragStart = { stroke = 0f }) { change, drag ->
+                            val (head, u) = hubbellHead(size.width.toFloat(), size.height.toFloat())
+                            if ((change.position - head).getDistance() < 26f * u) {
+                                stroke += drag.getDistance()
+                                if (stroke > 22f * u) {
+                                    stroke = 0f
+                                    vm.pet()
+                                }
+                            }
+                            change.consume()
+                        }
+                    },
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     drawHubbellScene(
@@ -95,8 +115,13 @@ fun GameScreen(vm: GameViewModel) {
                             nextDrink = s.selected,
                             time = time(),
                             alarm = s.inRescue,
+                            runSeconds = s.elapsedSeconds,
+                            petGlow = s.petGlow,
                         ),
                     )
+                }
+                Canvas(Modifier.fillMaxSize()) {
+                    vm.falling.forEach { drawFallingItem(it, time()) }
                 }
                 Column(
                     Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 12.dp),
@@ -123,9 +148,9 @@ fun GameScreen(vm: GameViewModel) {
                     RescueBanner(rescue, time, Modifier.align(Alignment.Center))
                 }
                 Text(
-                    "Tippe auf Hubbell, um ihm ein Getränk zu bringen",
+                    "Tippen = Getränk bringen · über den Kopf wischen = streicheln",
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
-                    color = PubColors.Cream.copy(alpha = if (s.drinksServed < 3) 0.85f else 0f),
+                    color = PubColors.Cream.copy(alpha = if (s.drinksServed < 6) 0.85f else 0f),
                     fontSize = 12.sp,
                 )
             }

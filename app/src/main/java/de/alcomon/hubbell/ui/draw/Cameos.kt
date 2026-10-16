@@ -40,7 +40,7 @@ val Cameos = listOf(
         shout = "Ich mag Whisky!", shirtText = "DRAM CLAN", left = Prop.HORNS, right = Prop.WHISKY,
     ),
     Cameo(
-        MetalGuy("Peter", Color(0xFFF2C6A0), Color(0xFF2A1D16), HairStyle.HALF_BALD, BeardStyle.GOATEE, Color(0xFF263238)),
+        MetalGuy("Peter", Color(0xFFF2C6A0), Color(0xFF111111), HairStyle.HALF_BALD, BeardStyle.FULL, Color(0xFF263238)),
         shout = "Jetzt knallt's!", shirtText = "Ich bin der Peter", left = Prop.DYNAMITE, right = Prop.DYNAMITE,
     ),
     Cameo(
@@ -199,6 +199,9 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
             look.hair,
         )
     }
+    if (look.beard == BeardStyle.FULL) {
+        drawOval(look.hair, topLeft = Offset(x - 5f * c, headC.y + 1.2f * c), size = Size(10f * c, 2.6f * c))
+    }
     // Weit aufgerissener Mund beim Reinrufen
     val shoutOpen = 0.7f + 0.3f * abs(sin(time * 12f))
     drawOval(Color(0xFF2B1A12), topLeft = Offset(x - 3f * c, headC.y + 2.5f * c), size = Size(6f * c, 5f * c * shoutOpen))
@@ -231,16 +234,35 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
         }
         HairStyle.BALD -> drawCircle(Color(0x55FFFFFF), 2.2f * c, Offset(x - 3f * c, headC.y - headR * 0.6f))
         HairStyle.HALF_BALD -> {
-            // Haarkranz an den Seiten, oben blank
-            drawArc(
-                look.hair, startAngle = 150f, sweepAngle = 70f, useCenter = true,
-                topLeft = Offset(x - headW * 1.08f, headC.y - headR * 1.02f), size = Size(headW * 2.16f, headR * 2.04f),
+            // Halbglatze wie bei Friedrich Merz, nur schwarz: hohe Stirn mit Geheimratsecken,
+            // kurzes Haar an den Seiten und ein schmaler, zurückgewichener Streifen oben
+            val top = headC.y - headR
+            for (side in listOf(-1f, 1f)) {
+                drawPath(
+                    Path().apply {
+                        moveTo(x + side * headW * 1.02f, headC.y + 2f * c)
+                        lineTo(x + side * headW * 1.08f, headC.y - headR * 0.35f)
+                        quadraticBezierTo(x + side * headW * 1.02f, headC.y - headR * 0.85f, x + side * headW * 0.62f, top + headR * 0.22f)
+                        lineTo(x + side * headW * 0.5f, top + headR * 0.4f)
+                        quadraticBezierTo(x + side * headW * 0.8f, headC.y - headR * 0.5f, x + side * headW * 0.82f, headC.y + 2f * c)
+                        close()
+                    },
+                    look.hair,
+                )
+            }
+            // dünner Haarstreifen ganz oben, der nach hinten gekämmt ist
+            drawPath(
+                Path().apply {
+                    moveTo(x - headW * 0.62f, top + headR * 0.22f)
+                    quadraticBezierTo(x, top - headR * 0.12f, x + headW * 0.62f, top + headR * 0.22f)
+                    lineTo(x + headW * 0.35f, top + headR * 0.2f)
+                    quadraticBezierTo(x, top + headR * 0.32f, x - headW * 0.35f, top + headR * 0.2f)
+                    close()
+                },
+                look.hair,
             )
-            drawArc(
-                look.hair, startAngle = 320f, sweepAngle = 70f, useCenter = true,
-                topLeft = Offset(x - headW * 1.08f, headC.y - headR * 1.02f), size = Size(headW * 2.16f, headR * 2.04f),
-            )
-            drawCircle(Color(0x66FFFFFF), 2.4f * c, Offset(x - 2f * c, headC.y - headR * 0.6f))
+            // glänzende Stirn
+            drawOval(Color(0x66FFFFFF), topLeft = Offset(x - 3.5f * c, top + headR * 0.35f), size = Size(5f * c, 2.6f * c))
         }
     }
     if (look.hairStyle == HairStyle.PONYTAIL) {

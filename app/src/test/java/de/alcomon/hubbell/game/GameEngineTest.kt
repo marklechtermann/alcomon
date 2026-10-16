@@ -107,6 +107,42 @@ class GameEngineTest {
     }
 
     @Test
+    fun streichelnGibtBonusMitAbklingzeit() {
+        val s = GameEngine.pet(GameState(pegel = 50f, level = 2))
+        assertEquals(2, s.coins)
+        assertTrue(s.pegel > 50f)
+        assertTrue(s.petGlow > 0f)
+        assertSame(s, GameEngine.pet(s))
+        val later = run(s, 1f)
+        assertTrue(GameEngine.pet(later).coins > later.coins)
+    }
+
+    @Test
+    fun wirkungenSummierenSichUeberUpgrades() {
+        val s = GameState(upgrades = mapOf(Upgrade.ZAPFHAHN to 2, Upgrade.GROSSE_KEHLE to 1))
+        assertEquals(0.17f, s.effect(Effect.SPEED), 0.001f)
+    }
+
+    @Test
+    fun nebeneinnahmenBringenTalerProSekunde() {
+        val s = run(GameState(pegel = 100f, upgrades = mapOf(Upgrade.FLIPPER to 5)), 10f)
+        assertTrue(s.coins in 14..15)
+    }
+
+    @Test
+    fun gefangeneBierflascheRettetHubbell() {
+        val rescue = run(GameState(pegel = 0.5f), 3f)
+        val caught = Falling.catch(rescue, FallingKind.BIERFLASCHE).state
+        assertFalse(caught.inRescue)
+        assertEquals(15f, caught.pegel, 0.01f)
+    }
+
+    @Test
+    fun es_gibt_50_upgrades_im_shop() {
+        assertEquals(50, Drink.entries.size + Upgrade.entries.size)
+    }
+
+    @Test
     fun belohnungenJeLevel() {
         assertEquals(RewardKind.FEUERWERK, Rewards.kindFor(5))
         assertEquals(RewardKind.GROSSES_FEST, Rewards.kindFor(10))

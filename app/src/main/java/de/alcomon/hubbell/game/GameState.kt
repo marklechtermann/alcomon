@@ -18,8 +18,21 @@ data class GameState(
     val waitressTimer: Float = 0f,
     /** Erreichte Level, deren Belohnungs-Animation noch abgespielt werden muss. */
     val pendingRewards: List<Int> = emptyList(),
+    /** Angesparte Bruchteile der Nebeneinnahmen. */
+    val coinFraction: Float = 0f,
+    val petCooldown: Float = 0f,
+    /** Wie lange Hubbell das Streicheln noch sichtbar genießt. */
+    val petGlow: Float = 0f,
+    val pets: Int = 0,
 ) {
     fun upgradeLevel(upgrade: Upgrade): Int = upgrades[upgrade] ?: 0
+
+    /** Summe einer Wirkung über alle gekauften Upgrade-Stufen. */
+    fun effect(effect: Effect): Float {
+        var total = 0f
+        for ((upgrade, level) in upgrades) if (upgrade.effect == effect) total += upgrade.perStage * level
+        return total
+    }
 
     val inRescue: Boolean get() = rescueSecondsLeft != null
 

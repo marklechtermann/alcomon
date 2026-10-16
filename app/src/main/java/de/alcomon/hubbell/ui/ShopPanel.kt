@@ -64,7 +64,7 @@ fun ShopPanel(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Upgrade-Shop", color = PubColors.Gold, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                    Text("Upgrade-Shop (${Drink.entries.size + Upgrade.entries.size})", color = PubColors.Gold, fontWeight = FontWeight.Black, fontSize = 24.sp)
                     Text("Die Zeit steht still, solange du einkaufst.", color = PubColors.Cream.copy(alpha = 0.8f), fontSize = 12.sp)
                 }
                 CoinIcon(20.dp)
@@ -78,8 +78,10 @@ fun ShopPanel(
             ) {
                 item { SectionHeader("Getränke") }
                 items(Drink.entries) { drink -> DrinkRow(state, drink, onBuyDrink, onSelectDrink) }
-                item { SectionHeader("Verbesserungen") }
-                items(Upgrade.entries) { upgrade -> UpgradeRow(state, upgrade, onBuyUpgrade) }
+                Upgrade.entries.groupBy { it.effect }.forEach { (effect, upgrades) ->
+                    item { SectionHeader(effect.category) }
+                    items(upgrades) { upgrade -> UpgradeRow(state, upgrade, onBuyUpgrade) }
+                }
             }
         }
     }
