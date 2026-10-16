@@ -23,11 +23,11 @@ Der Spielstand und die Rekorde werden lokal auf dem Gerät gespeichert.
 Voraussetzungen: JDK 17 und das Android SDK (z. B. über Android Studio).
 
 ```sh
-./gradlew assembleDebug        # APK unter app/build/outputs/apk/debug/
+./gradlew assembleRelease      # APK unter app/build/outputs/apk/release/
 ./gradlew testDebugUnitTest    # Tests der Spiellogik
 ```
 
-Jeder Push baut die Debug-APK außerdem in GitHub Actions; sie liegt dort als Artefakt `hubbell-debug-apk` zum Download bereit.
+Jeder Push auf `main` baut in GitHub Actions ein verkleinertes, signiertes Release-APK und veröffentlicht es auf der [Release-Seite](https://github.com/marklechtermann/alcomon/releases/latest). Der Signierschlüssel liegt als Prototyp-Schlüssel offen im Repo (`app/hubbell-release.jks`), damit neue Versionen sich über alte installieren lassen.
 
 ## Aufbau
 

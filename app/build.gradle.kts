@@ -12,13 +12,28 @@ android {
         applicationId = "de.alcomon.hubbell"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // In GitHub Actions zählt jeder Lauf die Version hoch, damit Updates sich drüber installieren lassen.
+        val build = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = build
+        versionName = "1.0.$build"
+    }
+
+    signingConfigs {
+        // Fester Prototyp-Schlüssel im Repo, damit jede neue Version das alte APK ersetzen kann.
+        create("release") {
+            storeFile = file("hubbell-release.jks")
+            storePassword = "hubbell-prototyp"
+            keyAlias = "hubbell"
+            keyPassword = "hubbell-prototyp"
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

@@ -1,11 +1,15 @@
-name: Android Build
+name: Android Release
 
 on:
   push:
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,10 +21,27 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Unit-Tests und Debug-APK bauen
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      - name: Unit-Tests und Release-APK bauen
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
 
-      - uses: actions/upload-artifact@v4
+      - name: APK umbenennen
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk "dist/hubbell-1.0.${{ github.run_number }}.apk"
+          ls -la dist
+
+      - name: GitHub-Release anlegen
+        uses: softprops/action-gh-release@v2
         with:
-          name: hubbell-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          tag_name: v1.0.${{ github.run_number }}
+          name: Hubbell 1.0.${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          body: |
+            Automatisch gebaut aus ${{ github.sha }}.
+
+            **Installieren:** `hubbell-1.0.${{ github.run_number }}.apk` unten auf dem Android-Handy herunterladen und öffnen
+            (beim ersten Mal „Installation aus unbekannten Quellen“ erlauben). Neue Versionen lassen sich über die alte drüber installieren.
+
+            Letzte Änderung: ${{ github.event.head_commit.message }}
+          files: dist/*.apk
