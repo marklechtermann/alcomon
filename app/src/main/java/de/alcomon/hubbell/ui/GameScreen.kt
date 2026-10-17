@@ -55,7 +55,6 @@ import de.alcomon.hubbell.game.Rewards
 import de.alcomon.hubbell.game.RunResult
 import de.alcomon.hubbell.ui.draw.HubbellPose
 import de.alcomon.hubbell.ui.draw.drawFallingItem
-import de.alcomon.hubbell.ui.draw.drawFlyingMagazines
 import de.alcomon.hubbell.ui.draw.drawHubbellScene
 import de.alcomon.hubbell.ui.draw.hubbellHead
 import de.alcomon.hubbell.ui.theme.PubColors
@@ -128,7 +127,6 @@ fun GameScreen(vm: GameViewModel) {
                 }
                 Canvas(Modifier.fillMaxSize()) {
                     vm.falling.forEach { drawFallingItem(it, time()) }
-                    drawFlyingMagazines(time())
                 }
                 Column(
                     Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 12.dp),
