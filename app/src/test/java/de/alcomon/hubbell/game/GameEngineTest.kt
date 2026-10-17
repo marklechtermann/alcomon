@@ -113,6 +113,20 @@ class GameEngineTest {
     }
 
     @Test
+    fun level30IstGewonnen() {
+        val s = GameState(level = 29, xp = GameEngine.xpForNextLevel(29) - 1f, pegel = 50f, upgrades = mapOf(Upgrade.ZAPFHAHN to 1))
+        val won = GameEngine.serve(s)
+        assertTrue(won.won)
+        assertTrue(won.gameOver)
+        assertEquals(GameEngine.WIN_LEVEL, won.level)
+        assertTrue(won.pendingRewards.isEmpty())
+        val day = GameEngine.newDay(won)
+        assertEquals(1, day.level)
+        assertFalse(day.won)
+        assertEquals(1, day.upgradeLevel(Upgrade.ZAPFHAHN))
+    }
+
+    @Test
     fun langeAbwesenheitBeendetDieRunde() {
         val s = GameEngine.catchUp(GameState(pegel = 60f), 30f * 60f)
         assertTrue(s.gameOver)

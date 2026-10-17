@@ -28,6 +28,8 @@ data class GameState(
     val cooldowns: Map<Drink, Float> = emptyMap(),
     /** Sekunden seit der letzten Aktion des Spielers; das Personal hilft nur, solange er mitspielt. */
     val idleSeconds: Float = 0f,
+    /** Level [GameEngine.WIN_LEVEL] erreicht: Hubbell hat genug und geht nach Hause, das Spiel ist gewonnen. */
+    val won: Boolean = false,
 ) {
     fun cooldownLeft(drink: Drink): Float = cooldowns[drink] ?: 0f
 

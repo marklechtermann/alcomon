@@ -122,6 +122,7 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
     // Nadine rennt ab und zu vorne durch
     drawNadine(pose.time, u)
     drawJuergen(pose.time, u)
+    drawJule(pose.time, u)
 
     if (knock != null) {
         val seated = Offset(cx, tableTop - 41f * u)
@@ -613,4 +614,35 @@ private fun DrawScope.drawHead(
             drawCircle(Color(0xFFF2B32A).copy(alpha = bang), 1.3f * u, star)
         }
     }
+}
+
+/**
+ * Hubbell im Stehen und Gehen (für die Siegeranimation): [feet] ist der Punkt zwischen den Füßen,
+ * [walk] die Schrittphase, eine Hand zeigt zum Abschied die Pommesgabel.
+ */
+fun DrawScope.drawWalkingHubbell(feet: Offset, u: Float, time: Float, walk: Float) {
+    val cx = feet.x
+    val headY = feet.y - 80f * u
+    val hip = Offset(cx, headY + 54f * u)
+    val stride = sin(walk) * 7f * u
+    // Beine in schwarzer Jeans mit Stiefeln
+    for (side in listOf(-1f, 1f)) {
+        val foot = Offset(cx + side * stride, feet.y - 2f * u)
+        val top = hip + Offset(side * 6f * u, 0f)
+        drawLine(Color(0xFF202027), top, foot, strokeWidth = 9f * u, cap = StrokeCap.Round)
+        drawRoundRect(Color(0xFF0E0E10), topLeft = foot + Offset(-4f * u, -2f * u), size = Size(11f * u, 5f * u), cornerRadius = CornerRadius(2f * u))
+    }
+    // Körper mit Metal-Shirt
+    drawOval(Shirt, topLeft = Offset(cx - 20f * u, headY + 14f * u), size = Size(40f * u, 44f * u))
+    drawDeathMetalLogo(Offset(cx, headY + 30f * u), 27f * u, ShirtPrint, DevilRed)
+    // Ein Arm schwingt, der andere winkt mit der Pommesgabel
+    val swing = Offset(cx - 18f * u, headY + 24f * u)
+    drawArm(swing, swing + Offset(-5f * u - stride * 0.4f, 22f * u), u)
+    drawCircle(Skin, 3.8f * u, swing + Offset(-5f * u - stride * 0.4f, 22f * u))
+    val wave = Offset(cx + 18f * u, headY + 24f * u)
+    val hand = Offset(cx + 30f * u + sin(time * 6f) * 2.5f * u, headY - 4f * u)
+    drawArm(wave, hand, u)
+    drawHornsHand(hand, u)
+    val pose = HubbellPose(pegel = 90f, drinking = null, drinkProgress = 0f, nextDrink = null, time = time)
+    drawHead(cx, headY, u, pose, 0.9f, sober = false, rocking = true, bang = 0f)
 }

@@ -178,3 +178,85 @@ fun DrawScope.drawJuergen(time: Float, u: Float) {
         }
     }
 }
+
+// Jule geht in einer vierten Lücke vorbei, wenn gerade kein Gast hüpft
+private const val JULE_OFFSET = 31.2f
+private const val JULE_LENGTH = 5.6f
+
+private val JuleSkin = Color(0xFFF7CFAA)
+
+/** Jule: blonder Pferdeschwanz, schwarzes Shirt mit großem „JULE“, ein Buch in der Hand und die Pommesgabel oben. */
+fun DrawScope.drawJule(time: Float, u: Float) {
+    val shifted = time - JULE_OFFSET
+    if (shifted < 0f) return
+    val k = floor(shifted / RUN_PERIOD).toInt()
+    val t = shifted - k * RUN_PERIOD
+    if (t > JULE_LENGTH) return
+    val c = u * 1.1f
+    val w = size.width
+    val dir = if (k % 2 == 0) 1f else -1f
+    val q = t / JULE_LENGTH
+    val x = if (dir > 0) -30f * c + (w + 60f * c) * q else w + 30f * c - (w + 60f * c) * q
+    val bob = abs(sin(t * 7f)) * 2f * c
+    val shoulderY = size.height - 24f * c - bob
+    val headC = Offset(x, shoulderY - 9f * c)
+
+    // Pferdeschwanz schwingt hinter dem Kopf
+    val sway = sin(t * 7f) * 2.5f * c
+    drawPath(
+        Path().apply {
+            moveTo(headC.x - dir * 4f * c, headC.y - 7f * c)
+            quadraticBezierTo(headC.x - dir * 16f * c, headC.y - 4f * c + sway, headC.x - dir * 14f * c + sway, headC.y + 12f * c)
+            quadraticBezierTo(headC.x - dir * 10f * c, headC.y + 2f * c, headC.x - dir * 5f * c, headC.y - 1f * c)
+            close()
+        },
+        Blonde,
+    )
+
+    // Schwarzes Metal-Shirt mit „JULE“
+    val torsoW = 32f * c
+    drawRoundRect(Color(0xFF111111), topLeft = Offset(x - torsoW / 2f, shoulderY), size = Size(torsoW, 40f * c), cornerRadius = CornerRadius(9f * c))
+    drawIntoCanvas { canvas ->
+        NadinePaint.color = Color(0xFFF2EDE0).toArgb()
+        NadinePaint.textSize = 10f * c
+        canvas.nativeCanvas.drawText("JULE", x, shoulderY + 14f * c, NadinePaint)
+    }
+
+    // Kopf mit blonden Haaren und Pony
+    drawOval(JuleSkin, topLeft = Offset(headC.x - 8f * c, headC.y - 9f * c), size = Size(16f * c, 18f * c))
+    drawArc(Blonde, 180f, 180f, true, topLeft = Offset(headC.x - 8.6f * c, headC.y - 10.5f * c), size = Size(17.2f * c, 12f * c))
+    drawRoundRect(Blonde, topLeft = Offset(headC.x - 7.5f * c, headC.y - 6f * c), size = Size(15f * c, 3f * c), cornerRadius = CornerRadius(1.5f * c))
+    drawArc(BlondeShade, 200f, 60f, false, topLeft = Offset(headC.x - 7f * c, headC.y - 9.5f * c), size = Size(14f * c, 9f * c), style = Stroke(0.8f * c))
+    drawRoundRect(Blonde, topLeft = Offset(headC.x - 9f * c, headC.y - 4f * c), size = Size(2.6f * c, 11f * c), cornerRadius = CornerRadius(1.3f * c))
+    drawRoundRect(Blonde, topLeft = Offset(headC.x + 6.4f * c, headC.y - 4f * c), size = Size(2.6f * c, 11f * c), cornerRadius = CornerRadius(1.3f * c))
+    for (sx in listOf(-1f, 1f)) {
+        val eye = headC + Offset(sx * 3.2f * c, -0.5f * c)
+        drawCircle(Color(0xFF2B1A12), 1.1f * c, eye)
+        drawLine(Color(0xFF2B1A12), eye + Offset(sx * 0.8f * c, -0.8f * c), eye + Offset(sx * 2f * c, -1.6f * c), strokeWidth = 0.5f * c)
+    }
+    drawCircle(Color(0xFFE0565B).copy(alpha = 0.3f), 1.7f * c, headC + Offset(-5f * c, 3f * c))
+    drawCircle(Color(0xFFE0565B).copy(alpha = 0.3f), 1.7f * c, headC + Offset(5f * c, 3f * c))
+    drawArc(Color(0xFF8E1B2E), 10f, 160f, false, topLeft = headC + Offset(-3f * c, 2f * c), size = Size(6f * c, 3.6f * c), style = Stroke(1f * c))
+
+    // Hintere Hand hält ein Buch
+    val back = Offset(x - dir * (torsoW / 2f - 3f * c), shoulderY + 4f * c)
+    val bookHand = back + Offset(-dir * 5f * c, 12f * c + sin(t * 7f) * 1.5f * c)
+    drawLine(JuleSkin, back, bookHand, strokeWidth = 4.5f * c, cap = StrokeCap.Round)
+    drawLine(Color(0xFF111111), back, back + (bookHand - back) * 0.3f, strokeWidth = 6f * c, cap = StrokeCap.Round)
+    val book = bookHand + Offset(-dir * 4f * c - 5f * c, -4f * c)
+    drawRoundRect(Color(0xFF7A1E2C), topLeft = book, size = Size(10f * c, 13f * c), cornerRadius = CornerRadius(1f * c))
+    drawRect(Color(0xFFF2EDE0), topLeft = book + Offset(if (dir > 0) 9f * c else 0f, 0.8f * c), size = Size(1f * c, 11.4f * c))
+    drawLine(Color(0xFFD9B44A), book + Offset(2f * c, 4f * c), book + Offset(8f * c, 4f * c), strokeWidth = 0.8f * c)
+    drawLine(Color(0xFFD9B44A), book + Offset(2f * c, 6f * c), book + Offset(7f * c, 6f * c), strokeWidth = 0.6f * c)
+    drawCircle(JuleSkin, 3f * c, bookHand)
+
+    // Vordere Hand zeigt die Pommesgabel
+    val front = Offset(x + dir * (torsoW / 2f - 3f * c), shoulderY + 4f * c)
+    val hand = front + Offset(dir * 6f * c, -19f * c + sin(t * 5f) * 1.5f * c)
+    drawLine(JuleSkin, front, hand, strokeWidth = 4.5f * c, cap = StrokeCap.Round)
+    drawLine(Color(0xFF111111), front, front + (hand - front) * 0.3f, strokeWidth = 6f * c, cap = StrokeCap.Round)
+    drawLine(JuleSkin, hand + Offset(-1.5f * c, -1f * c), hand + Offset(-2.6f * c, -7.5f * c), strokeWidth = 1.7f * c, cap = StrokeCap.Round)
+    drawLine(JuleSkin, hand + Offset(1.6f * c, -1f * c), hand + Offset(3f * c, -6.5f * c), strokeWidth = 1.7f * c, cap = StrokeCap.Round)
+    drawCircle(JuleSkin, 3.2f * c, hand)
+    drawLine(Color(0x55000000), hand + Offset(-1.6f * c, 0.6f * c), hand + Offset(1.6f * c, 0.6f * c), strokeWidth = 0.6f * c)
+}

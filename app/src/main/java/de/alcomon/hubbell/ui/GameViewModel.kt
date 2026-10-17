@@ -95,6 +95,11 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             floaters = floaters.map { it.copy(age = it.age + dt) }.filter { it.age < FLOATER_LIFETIME }
         }
         if (specialCheer > 0f) specialCheer = (specialCheer - dt).coerceAtLeast(0f)
+        // Gewonnen durch eigenes Servieren, Fangen, Streicheln oder das Special Event
+        if (state.gameOver && lastResult == null) {
+            if (state.won) sound.play(Sfx.RIFF_1)
+            onGameOver(state)
+        }
         if (screen != Screen.GAME || shopOpen || state.gameOver) {
             motion.stop()
             return
@@ -237,6 +242,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun playEventSounds(before: GameState, after: GameState, dt: Float) {
         when {
+            after.won -> sound.play(Sfx.RIFF_1)
             after.gameOver -> sound.play(Sfx.GAME_OVER)
             after.level > before.level -> sound.play(Sfx.LEVEL_UP)
             after.drinksServed > before.drinksServed -> sound.play(Sfx.PROST)
@@ -292,8 +298,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun startNewGame() {
-        state = GameState()
+    fun startNewGame() = startRun(GameState())
+
+    /** Nach dem Sieg weiterspielen: neuer Tag, Getränke und Upgrades bleiben. */
+    fun startNewDay() = startRun(GameEngine.newDay(state))
+
+    private fun startRun(fresh: GameState) {
+        state = fresh
         floaters = emptyList()
         falling = emptyList()
         fallingSpawn = Falling.nextSpawnDelay()

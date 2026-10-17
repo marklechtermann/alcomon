@@ -12,6 +12,9 @@ object GameEngine {
     const val RESCUE_SECONDS = 10f
     const val HAPPY_PEGEL = 80f
 
+    /** Wer dieses Level erreicht, hat gewonnen. */
+    const val WIN_LEVEL = 30
+
     const val PET_COOLDOWN = 0.8f
     const val PET_GLOW_SECONDS = 1.5f
     const val PET_PEGEL = 1.5f
@@ -120,6 +123,9 @@ object GameEngine {
         return gainXp(served, drink.boost)
     }
 
+    /** Nach dem Sieg: ein neuer Tag in der Kneipe, gekaufte Getränke und Upgrades bleiben. */
+    fun newDay(s: GameState): GameState = GameState(unlocked = s.unlocked, upgrades = s.upgrades)
+
     fun gainXpPublic(s: GameState, amount: Float): GameState = gainXp(s, amount)
 
     private fun gainXp(s: GameState, amount: Float): GameState {
@@ -132,6 +138,10 @@ object GameEngine {
             level++
             coins += levelUpCoins(level)
             rewards += level
+        }
+        if (level >= WIN_LEVEL) {
+            // Geschafft: Statt der Level-Belohnung kommt die Siegeranimation
+            return s.copy(level = WIN_LEVEL, xp = 0f, coins = coins, pendingRewards = emptyList(), won = true, gameOver = true, drinking = null)
         }
         return s.copy(level = level, xp = xp, coins = coins, pendingRewards = rewards)
     }

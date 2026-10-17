@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -57,6 +58,7 @@ import de.alcomon.hubbell.game.RunResult
 import de.alcomon.hubbell.ui.draw.HubbellPose
 import de.alcomon.hubbell.ui.draw.drawFallingItem
 import de.alcomon.hubbell.ui.draw.drawHubbellScene
+import de.alcomon.hubbell.ui.draw.drawWinScene
 import de.alcomon.hubbell.ui.draw.hubbellHead
 import de.alcomon.hubbell.ui.theme.PubColors
 import kotlin.math.ceil
@@ -185,7 +187,9 @@ fun GameScreen(vm: GameViewModel) {
         }
 
         val result = vm.lastResult
-        if (s.gameOver && result != null) {
+        if (s.won && result != null) {
+            WinOverlay(result, time, onNewDay = vm::startNewDay, onRestart = vm::startNewGame, onTitle = vm::toTitle)
+        } else if (s.gameOver && result != null) {
             GameOverOverlay(result, time, onAgain = vm::startNewGame, onTitle = vm::toTitle)
         }
     }
@@ -365,6 +369,61 @@ private fun GameOverOverlay(result: RunResult, time: () -> Float, onAgain: () ->
                 Text("Nochmal!", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onTitle, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                Text("Zum Titel", color = PubColors.Cream)
+            }
+        }
+    }
+}
+
+/** Level 30 geschafft: Hubbell verlässt die Kneipe und geht schlafen. */
+@Composable
+private fun WinOverlay(result: RunResult, time: () -> Float, onNewDay: () -> Unit, onRestart: () -> Unit, onTitle: () -> Unit) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.8f))
+            .pointerInput(Unit) { detectTapGestures { } },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .padding(20.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(PubColors.Panel)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("GEWONNEN!", color = PubColors.Gold, fontWeight = FontWeight.Black, fontSize = 34.sp)
+            Text("Level ${result.level} erreicht", color = PubColors.Green, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(12.dp))
+            Canvas(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(16.dp))) {
+                drawWinScene(time())
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Hubbell hat jetzt genug und geht nach Hause schlafen. Du hast das Spiel gewonnen!",
+                color = PubColors.Cream,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(10.dp))
+            StatLine("Getränke serviert", "${result.drinks}", result.newBestDrinks)
+            StatLine("Gebraucht", formatDuration(result.seconds), false)
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onNewDay, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(16.dp)) {
+                Text("Neuen Tag beginnen", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+            Text(
+                "Gekaufte Getränke und Upgrades bleiben",
+                color = PubColors.Cream.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = onRestart, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                Text("Neu starten", color = PubColors.Cream)
+            }
             OutlinedButton(onClick = onTitle, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
                 Text("Zum Titel", color = PubColors.Cream)
             }
