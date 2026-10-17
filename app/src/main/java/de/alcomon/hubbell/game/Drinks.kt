@@ -116,9 +116,9 @@ enum class Upgrade(
     FASSANSTICH("Fassanstich", "🛢️", "O'zapft is! 12 % mehr Pegel pro Stufe.", Effect.BOOST, 0.12f, 6000, 3, 17),
 
     // Personal: bringt automatisch Getränke
-    KELLNERIN("Kellnerin Gerda", "💁", "Bringt Hubbell automatisch sein Getränk.", Effect.WAITER, 1f, 500, 3, 7),
-    ROADIE("Roadie Rudi", "🧔", "Schleppt Kisten und Biere. Noch mehr Nachschub.", Effect.WAITER, 0.8f, 2000, 3, 11),
-    ZAPFROBOTER("Zapf-Roboter 3000", "🤖", "Kennt keine Pause. Viel mehr Nachschub.", Effect.WAITER, 1.2f, 8000, 3, 16),
+    KELLNERIN("Kellnerin Gerda", "💁", "Bringt Hubbell Getränke, solange du mitspielst.", Effect.WAITER, 1f, 500, 3, 7),
+    ROADIE("Roadie Rudi", "🧔", "Schleppt Biere ran, solange du mitspielst.", Effect.WAITER, 0.8f, 2000, 3, 11),
+    ZAPFROBOTER("Zapf-Roboter 3000", "🤖", "Viel mehr Nachschub, solange du mitspielst.", Effect.WAITER, 1.2f, 8000, 3, 16),
 
     // Streicheln: mehr Bonus beim Kopfkraulen
     KRAULHANDSCHUH("Kraul-Handschuh", "🧤", "Streicheln bringt pro Stufe 30 % mehr Bonus.", Effect.PET, 0.3f, 80, 5, 2),

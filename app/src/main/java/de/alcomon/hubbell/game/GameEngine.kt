@@ -69,12 +69,19 @@ object GameEngine {
             petCooldown = PET_COOLDOWN,
             petGlow = PET_GLOW_SECONDS,
             pets = s.pets + 1,
+            idleSeconds = 0f,
         )
         return gainXp(petted, 2f)
     }
 
     /** Flachere Kurve als früher (Exponent 1,6), damit es ab Level 10 spürbar schneller weitergeht. */
     fun xpForNextLevel(level: Int): Float = (40.0 * level.toDouble().pow(1.35)).toFloat()
+
+    /** So lange nach der letzten eigenen Aktion hilft das Personal noch mit. */
+    const val WAITER_IDLE_LIMIT = 8f
+
+    /** Der Spieler hat etwas getan: Das Personal bleibt bei der Sache. */
+    fun playerActed(s: GameState): GameState = if (s.idleSeconds == 0f) s else s.copy(idleSeconds = 0f)
 
     /** Abstand, in dem das Personal automatisch serviert, oder null ohne Personal. */
     fun waiterInterval(s: GameState): Float? {
@@ -108,6 +115,7 @@ object GameEngine {
             drinksServed = s.drinksServed + 1,
             selected = drink,
             cooldowns = s.cooldowns + (drink to cooldownFor(s, drink)),
+            idleSeconds = 0f,
         )
         return gainXp(served, drink.boost)
     }
@@ -162,6 +170,7 @@ object GameEngine {
             cooldowns = if (s.cooldowns.isEmpty()) s.cooldowns else s.cooldowns
                 .mapValues { (_, left) -> left - dt }
                 .filterValues { it > 0f },
+            idleSeconds = s.idleSeconds + dt,
             pegel = pegel,
             drinking = drinking,
             drinkRemaining = remaining,
@@ -179,12 +188,14 @@ object GameEngine {
             next = next.copy(coins = next.coins + whole, coinFraction = earned - whole)
         }
 
+        // Das Personal serviert nur, solange der Spieler selbst mitspielt. Wer nichts tut,
+        // dem sinkt der Pegel auf null, egal wie viele Upgrades er hat.
         val interval = waiterInterval(s)
-        if (interval != null && !over) {
+        if (interval != null && !over && next.idleSeconds < WAITER_IDLE_LIMIT) {
             val timer = next.waitressTimer + dt
             val ready = bestReady(next)
             next = if (timer >= interval && next.drinking == null && ready != null) {
-                serve(next.copy(waitressTimer = 0f), ready)
+                serve(next.copy(waitressTimer = 0f), ready).copy(idleSeconds = next.idleSeconds)
             } else {
                 next.copy(waitressTimer = min(timer, interval))
             }

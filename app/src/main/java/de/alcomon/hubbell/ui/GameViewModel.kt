@@ -145,7 +145,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         // Getränke gibt es nur noch über die Knöpfe unten
         if (hit == null) return
         falling = falling - hit
-        val before = state
+        val before = GameEngine.playerActed(state)
         val caught = Falling.catch(before, hit.kind)
         state = caught.state
         addFloater(caught.text)
@@ -217,7 +217,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (special == null || state.gameOver) return
         endSpecial()
         val before = state
-        state = SpecialEvent.reward(before)
+        state = GameEngine.playerActed(SpecialEvent.reward(before))
         specialCheer = 2.6f
         addFloater("EX! +${state.coins - before.coins} Taler, Pegel voll!")
         sound.play(Sfx.LEVEL_UP)

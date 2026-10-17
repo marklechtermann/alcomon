@@ -26,6 +26,8 @@ data class GameState(
     val pets: Int = 0,
     /** Restzeit pro Getränk, bis man es wieder bestellen kann. */
     val cooldowns: Map<Drink, Float> = emptyMap(),
+    /** Sekunden seit der letzten Aktion des Spielers; das Personal hilft nur, solange er mitspielt. */
+    val idleSeconds: Float = 0f,
 ) {
     fun cooldownLeft(drink: Drink): Float = cooldowns[drink] ?: 0f
 

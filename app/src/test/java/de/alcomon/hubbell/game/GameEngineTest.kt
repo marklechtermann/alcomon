@@ -99,6 +99,20 @@ class GameEngineTest {
     }
 
     @Test
+    fun ohneMitspielenGehtAuchMitVollemPersonalDerPegelAufNull() {
+        val maxed = GameState(
+            pegel = 100f,
+            level = 20,
+            unlocked = Drink.entries.toSet(),
+            upgrades = Upgrade.entries.associateWith { it.maxLevel },
+        )
+        assertTrue(GameEngine.catchUp(maxed, 10f * 60f).gameOver)
+        // Solange man mitspielt, hilft das Personal dagegen
+        val helped = run(maxed, 5f)
+        assertTrue(helped.drinksServed > 0)
+    }
+
+    @Test
     fun langeAbwesenheitBeendetDieRunde() {
         val s = GameEngine.catchUp(GameState(pegel = 60f), 30f * 60f)
         assertTrue(s.gameOver)
