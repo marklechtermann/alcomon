@@ -40,6 +40,8 @@ class Cameo(
     val capBrim: Color? = null,
     /** Shirt mit aufgedrucktem Foto */
     val photoShirt: Boolean = false,
+    /** Thors Hammer auf dem Shirt */
+    val mjolnir: Boolean = false,
 )
 
 val Cameos = listOf(
@@ -89,8 +91,8 @@ val Cameos = listOf(
         shout = "PETER!!!", shirtText = "WO IST PETER?", left = Prop.HORNS, right = Prop.BEER, lady = true, loud = true,
     ),
     Cameo(
-        MetalGuy("Maik", Color(0xFFF2C6A0), Color(0xFFE0A040), HairStyle.LONG, BeardStyle.LONG, Color(0xFF4E342E), helmet = true, belly = true, height = 1.1f),
-        shout = "Der Generator hat keinen Strom!!!", shirtText = "MAIK", left = Prop.AXE, right = Prop.MEAD, loud = true,
+        MetalGuy("Maik", Color(0xFFF2C6A0), Color(0xFFE0A040), HairStyle.LONG, BeardStyle.LONG, Color(0xFF111111), helmet = true, belly = true, height = 1.1f),
+        shout = "Der Generator hat keinen Strom!!!", shirtText = "MAIK", left = Prop.AXE, right = Prop.MEAD, loud = true, mjolnir = true,
     ),
 )
 
@@ -175,6 +177,17 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
         drawLine(Color(0xFFECEFF1), Offset(x - 3f * c, shoulderY + 1f * c), Offset(x - 3.5f * c, shoulderY + 8f * c), strokeWidth = 0.7f * c)
         drawLine(Color(0xFFECEFF1), Offset(x + 3f * c, shoulderY + 1f * c), Offset(x + 3.5f * c, shoulderY + 8f * c), strokeWidth = 0.7f * c)
         drawRoundRect(Color(0x33000000), topLeft = Offset(x - torsoW * 0.3f, shoulderY + 24f * c), size = Size(torsoW * 0.6f, 9f * c), cornerRadius = CornerRadius(3f * c))
+    }
+    if (cameo.mjolnir) {
+        // Mjölnir: breiter Hammerkopf mit Runen-Kerben, kurzer Stiel mit Knauf
+        val silver = Color(0xFFCFD8DC)
+        val hy = shoulderY + 15f * c
+        drawRoundRect(silver, topLeft = Offset(x - 8f * c, hy), size = Size(16f * c, 6.5f * c), cornerRadius = CornerRadius(1.2f * c))
+        drawRect(Color(0xFF111111), topLeft = Offset(x - 8f * c, hy + 2.8f * c), size = Size(16f * c, 0.8f * c))
+        for (i in -1..1) drawLine(Color(0xFF111111), Offset(x + i * 4f * c, hy + 0.8f * c), Offset(x + i * 4f * c + 1f * c, hy + 2.2f * c), strokeWidth = 0.5f * c)
+        drawRect(Color(0xFF8D6E63), topLeft = Offset(x - 1.3f * c, hy + 6.5f * c), size = Size(2.6f * c, 8f * c))
+        for (i in 0..2) drawLine(Color(0xFF5D4037), Offset(x - 1.3f * c, hy + 8f * c + i * 2.2f * c), Offset(x + 1.3f * c, hy + 9f * c + i * 2.2f * c), strokeWidth = 0.6f * c)
+        drawCircle(silver, 1.6f * c, Offset(x, hy + 15.5f * c))
     }
     if (cameo.photoShirt) {
         // aufgedrucktes Foto mit Bühnenlicht und einem kleinen Kerl drauf
