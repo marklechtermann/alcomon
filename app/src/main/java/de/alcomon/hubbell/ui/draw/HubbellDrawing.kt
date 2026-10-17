@@ -123,6 +123,7 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
     drawNadine(pose.time, u)
     drawJuergen(pose.time, u)
     drawJule(pose.time, u)
+    drawSchlitzer(pose.time, u)
 
     if (knock != null) {
         val seated = Offset(cx, tableTop - 41f * u)

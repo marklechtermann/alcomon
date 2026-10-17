@@ -260,3 +260,85 @@ fun DrawScope.drawJule(time: Float, u: Float) {
     drawCircle(JuleSkin, 3.2f * c, hand)
     drawLine(Color(0x55000000), hand + Offset(-1.6f * c, 0.6f * c), hand + Offset(1.6f * c, 0.6f * c), strokeWidth = 0.6f * c)
 }
+
+// Der Schlitzer hüpft in der Lücke zwischen dem ersten und zweiten Gast durchs Bild
+private const val SCHLITZER_OFFSET = 10.6f
+private const val SCHLITZER_LENGTH = 4f
+
+private val SchlitzerSkin = Color(0xFFE9B98F)
+private val Cast = Color(0xFFF4F1EA)
+
+/** Der Schlitzer: rechter Arm in Gips, links die Wacken-Pommesgabel, „SCHLITZER“ auf dem Shirt, brüllt „DORO!“. */
+fun DrawScope.drawSchlitzer(time: Float, u: Float) {
+    val shifted = time - SCHLITZER_OFFSET
+    if (shifted < 0f) return
+    val k = floor(shifted / RUN_PERIOD).toInt()
+    val t = shifted - k * RUN_PERIOD
+    if (t > SCHLITZER_LENGTH) return
+    val c = u * 1.1f
+    val w = size.width
+    val dir = if (k % 2 == 0) 1f else -1f
+    val q = t / SCHLITZER_LENGTH
+    val x = if (dir > 0) -30f * c + (w + 60f * c) * q else w + 30f * c - (w + 60f * c) * q
+    // Er hüpft in großen Sätzen
+    val hop = abs(sin(t * 7f)) * 9f * c
+    val shoulderY = size.height - 24f * c - hop
+    val headC = Offset(x + dir * 1.5f * c, shoulderY - 9.5f * c)
+
+    val torsoW = 34f * c
+    drawRoundRect(Color(0xFF111111), topLeft = Offset(x - torsoW / 2f, shoulderY), size = Size(torsoW, 40f * c), cornerRadius = CornerRadius(9f * c))
+    drawIntoCanvas { canvas ->
+        NadinePaint.color = Color(0xFFD7263D).toArgb()
+        NadinePaint.textSize = 7f * c
+        while (NadinePaint.measureText("SCHLITZER") > torsoW * 0.92f && NadinePaint.textSize > 3f) NadinePaint.textSize *= 0.93f
+        canvas.nativeCanvas.drawText("SCHLITZER", x, shoulderY + 12f * c, NadinePaint)
+    }
+
+    // Kopf: kurze dunkle Haare, Stoppelbart, weit offener Mund zum Brüllen
+    drawCircle(SchlitzerSkin, 9f * c, headC)
+    drawArc(Color(0xFF2A1E18), 180f, 180f, true, topLeft = headC + Offset(-9.4f * c, -10f * c), size = Size(18.8f * c, 10f * c))
+    drawArc(Color(0x55302018), 0f, 180f, true, topLeft = headC + Offset(-7.5f * c, -2f * c), size = Size(15f * c, 11f * c))
+    drawLine(Color(0xFF2B1A12), headC + Offset(-5f * c, -3.8f * c), headC + Offset(-1.5f * c, -2.6f * c), strokeWidth = 1f * c)
+    drawLine(Color(0xFF2B1A12), headC + Offset(1.5f * c, -2.6f * c), headC + Offset(5f * c, -3.8f * c), strokeWidth = 1f * c)
+    drawCircle(Color(0xFF2B1A12), 1.1f * c, headC + Offset(-3.2f * c, -1f * c))
+    drawCircle(Color(0xFF2B1A12), 1.1f * c, headC + Offset(3.2f * c, -1f * c))
+    drawOval(Color(0xFF5A0E18), topLeft = headC + Offset(-2.8f * c, 2f * c), size = Size(5.6f * c, 5f * c))
+
+    // Rechter Arm im weißen Gips mit Schlinge (auf der Körperseite, die gerade hinten ist)
+    val rightSide = -dir
+    val castShoulder = Offset(x + rightSide * (torsoW / 2f - 3f * c), shoulderY + 4f * c)
+    val elbow = castShoulder + Offset(rightSide * 2f * c, 11f * c)
+    val castHand = elbow + Offset(-rightSide * 9f * c, -2f * c)
+    drawLine(Color(0xFF111111), castShoulder, castShoulder + (elbow - castShoulder) * 0.3f, strokeWidth = 6f * c, cap = StrokeCap.Round)
+    drawLine(Cast, castShoulder + (elbow - castShoulder) * 0.3f, elbow, strokeWidth = 6f * c, cap = StrokeCap.Round)
+    drawLine(Cast, elbow, castHand, strokeWidth = 6.5f * c, cap = StrokeCap.Round)
+    drawLine(Color(0xFFB0ACA0), elbow + (castHand - elbow) * 0.4f, elbow + (castHand - elbow) * 0.45f + Offset(0f, 2.5f * c), strokeWidth = 0.6f * c)
+    drawLine(Color(0xFF3A3A44), headC + Offset(rightSide * 6f * c, 8f * c), castHand, strokeWidth = 1.4f * c)
+    drawLine(Color(0xFF3A3A44), headC + Offset(-rightSide * 4f * c, 9f * c), elbow, strokeWidth = 1.4f * c)
+
+    // Linke Hand hoch mit der Wacken-Pommesgabel
+    val front = Offset(x - rightSide * (torsoW / 2f - 3f * c), shoulderY + 4f * c)
+    val hand = front + Offset(-rightSide * 7f * c, -21f * c + sin(t * 9f) * 1.5f * c)
+    drawLine(SchlitzerSkin, front, hand, strokeWidth = 4.5f * c, cap = StrokeCap.Round)
+    drawLine(Color(0xFF111111), front, front + (hand - front) * 0.3f, strokeWidth = 6f * c, cap = StrokeCap.Round)
+    drawLine(SchlitzerSkin, hand + Offset(-1.5f * c, -1f * c), hand + Offset(-2.6f * c, -7.5f * c), strokeWidth = 1.7f * c, cap = StrokeCap.Round)
+    drawLine(SchlitzerSkin, hand + Offset(1.6f * c, -1f * c), hand + Offset(3f * c, -6.5f * c), strokeWidth = 1.7f * c, cap = StrokeCap.Round)
+    drawCircle(SchlitzerSkin, 3.2f * c, hand)
+    drawLine(Color(0x55000000), hand + Offset(-1.6f * c, 0.6f * c), hand + Offset(1.6f * c, 0.6f * c), strokeWidth = 0.6f * c)
+
+    // Er brüllt laut nach Doro
+    if (q in 0.15f..0.9f) {
+        drawIntoCanvas { canvas ->
+            NadinePaint.textSize = 9f * c
+            NadinePaint.color = Color(0xFFD7263D).toArgb()
+            val text = "DORO!!!"
+            val bw = NadinePaint.measureText(text) + 8f * c
+            val bx = headC.x.coerceIn(bw / 2f + 4f, size.width - bw / 2f - 4f)
+            val top = headC.y - 30f * c
+            val shake = sin(time * 60f) * 0.8f * c
+            drawRoundRect(Color.White, topLeft = Offset(bx - bw / 2f + shake, top), size = Size(bw, 13f * c), cornerRadius = CornerRadius(4f * c))
+            drawRoundRect(Color(0xFF1A1A1A), topLeft = Offset(bx - bw / 2f + shake, top), size = Size(bw, 13f * c), cornerRadius = CornerRadius(4f * c), style = Stroke(0.8f * c))
+            canvas.nativeCanvas.drawText(text, bx + shake, top + 9.8f * c, NadinePaint)
+        }
+    }
+}
