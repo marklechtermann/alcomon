@@ -119,7 +119,7 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
     drawCameos(pose.time, u)
     // Jockel surft ab und zu über die Menge
     drawCrowdsurf(pose.time, u)
-    // Nadine rennt ab und zu vorne durch
+    // Nadin rennt ab und zu vorne durch
     drawNadine(pose.time, u)
     drawJuergen(pose.time, u)
     drawJule(pose.time, u)

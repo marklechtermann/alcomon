@@ -17,7 +17,7 @@ import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.sin
 
-// Auch Nadine nutzt eine Lücke zwischen den hüpfenden Gästen, aber eine andere als Jockel
+// Auch Nadin nutzt eine Lücke zwischen den hüpfenden Gästen, aber eine andere als Jockel
 private const val RUN_PERIOD = 55f
 private const val RUN_OFFSET = 20f
 private const val RUN_LENGTH = 3.6f
@@ -31,7 +31,7 @@ private val NadinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
     typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
 }
 
-/** Nadine rennt ab und zu vorne durchs Bild, die Haare wehen, die Pommesgabel ist oben. */
+/** Nadin rennt ab und zu vorne durchs Bild, die Haare wehen, die Pommesgabel ist oben. */
 fun DrawScope.drawNadine(time: Float, u: Float) {
     val shifted = time - RUN_OFFSET
     if (shifted < 0f) return
@@ -59,13 +59,13 @@ fun DrawScope.drawNadine(time: Float, u: Float) {
         Blonde,
     )
 
-    // Schwarzes Metal-Shirt mit „NADINE ROCKT“
+    // Schwarzes Metal-Shirt mit „NADIN ROCKT“
     val torsoW = 30f * c
     drawRoundRect(Color(0xFF111111), topLeft = Offset(x - torsoW / 2f, shoulderY), size = Size(torsoW, 40f * c), cornerRadius = CornerRadius(9f * c))
     drawIntoCanvas { canvas ->
         NadinePaint.color = Color(0xFFF2EDE0).toArgb()
         NadinePaint.textSize = 5.6f * c
-        canvas.nativeCanvas.drawText("NADINE", x, shoulderY + 10f * c, NadinePaint)
+        canvas.nativeCanvas.drawText("NADIN", x, shoulderY + 10f * c, NadinePaint)
         NadinePaint.color = Color(0xFFD7263D).toArgb()
         canvas.nativeCanvas.drawText("ROCKT", x, shoulderY + 16.5f * c, NadinePaint)
     }

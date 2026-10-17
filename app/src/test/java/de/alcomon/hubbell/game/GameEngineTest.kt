@@ -113,6 +113,13 @@ class GameEngineTest {
     }
 
     @Test
+    fun untenStehenNurDieVierBestenGetraenke() {
+        val all = GameState(unlocked = Drink.entries.toSet())
+        assertEquals(listOf(Drink.DRACHENBLUT, Drink.SPEZIAL, Drink.ABSINTH, Drink.RUM), GameEngine.barDrinks(all))
+        assertEquals(listOf(Drink.HELLES), GameEngine.barDrinks(GameState()))
+    }
+
+    @Test
     fun level30IstGewonnen() {
         val s = GameState(level = 29, xp = GameEngine.xpForNextLevel(29) - 1f, pegel = 50f, upgrades = mapOf(Upgrade.ZAPFHAHN to 1))
         val won = GameEngine.serve(s)

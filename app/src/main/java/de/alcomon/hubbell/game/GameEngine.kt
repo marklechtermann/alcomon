@@ -96,6 +96,12 @@ object GameEngine {
         !s.gameOver && drink in s.unlocked && s.cooldownLeft(drink) <= 0f
 
     /** Das beste Getränk, das gerade bereit ist, oder null. */
+    /** So viele Getränke passen unten nebeneinander. */
+    const val BAR_SLOTS = 4
+
+    /** Die besten gekauften Getränke für die Knopfleiste, das stärkste zuerst. */
+    fun barDrinks(s: GameState): List<Drink> = Drink.entries.filter { it in s.unlocked }.takeLast(BAR_SLOTS).reversed()
+
     fun bestReady(s: GameState): Drink? = Drink.entries.lastOrNull { canServe(s, it) }
 
     /**

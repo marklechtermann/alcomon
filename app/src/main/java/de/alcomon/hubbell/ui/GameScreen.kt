@@ -6,10 +6,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +47,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.alcomon.hubbell.R
@@ -88,7 +89,7 @@ fun GameScreen(vm: GameViewModel) {
 
     Box(Modifier.fillMaxSize().background(PubColors.WoodDark)) {
         Column(Modifier.fillMaxSize().systemBarsPadding()) {
-            TopHud(s, time, vm.soundOn, vm::toggleSound)
+            TopHud(s, time, vm.soundOn, vm::toggleSound, vm::openShop)
             Box(
                 Modifier
                     .weight(1f)
@@ -196,7 +197,7 @@ fun GameScreen(vm: GameViewModel) {
 }
 
 @Composable
-private fun TopHud(s: GameState, time: () -> Float, soundOn: Boolean, onToggleSound: () -> Unit) {
+private fun TopHud(s: GameState, time: () -> Float, soundOn: Boolean, onToggleSound: () -> Unit, onShop: () -> Unit) {
     Column(Modifier.fillMaxWidth().background(PubColors.Panel).padding(horizontal = 14.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -213,6 +214,27 @@ private fun TopHud(s: GameState, time: () -> Float, soundOn: Boolean, onToggleSo
                 CoinIcon(20.dp)
                 Spacer(Modifier.width(6.dp))
                 Text("${s.coins} Taler", color = PubColors.Cream, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+            Spacer(Modifier.width(10.dp))
+            // Der Shop sitzt oben, damit unten nur die Getränke sind und nichts den Blick versperrt
+            Box {
+                OutlinedButton(
+                    onClick = onShop,
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                ) {
+                    Text("Shop", fontSize = 16.sp, color = PubColors.Gold, fontWeight = FontWeight.Bold)
+                }
+                if (GameEngine.anythingAffordable(s)) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 3.dp, y = (-3).dp)
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(PubColors.Red),
+                    )
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -238,52 +260,33 @@ private fun TopHud(s: GameState, time: () -> Float, soundOn: Boolean, onToggleSo
 
 @Composable
 private fun BottomBar(s: GameState, vm: GameViewModel) {
+    // Nur die besten gekauften Getränke als Knöpfe, damit sie immer genug Platz zum Tippen haben
     Row(
-        Modifier.fillMaxWidth().background(PubColors.Panel).padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        Modifier.fillMaxWidth().background(PubColors.Panel).padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // Jedes gekaufte Getränk ist ein eigener Knopf mit eigener Wartezeit
-        Row(
-            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Drink.entries.filter { it in s.unlocked }.reversed().forEach { drink ->
-                DrinkButton(
-                    drink = drink,
-                    readiness = GameEngine.readiness(s, drink),
-                    secondsLeft = s.cooldownLeft(drink),
-                    onClick = { vm.serve(drink) },
-                )
-            }
+        GameEngine.barDrinks(s).forEach { drink ->
+            DrinkButton(
+                drink = drink,
+                readiness = GameEngine.readiness(s, drink),
+                secondsLeft = s.cooldownLeft(drink),
+                onClick = { vm.serve(drink) },
+                modifier = Modifier.weight(1f),
+            )
         }
-        Spacer(Modifier.width(8.dp))
-        Box {
-            OutlinedButton(onClick = vm::openShop, modifier = Modifier.height(84.dp), shape = RoundedCornerShape(16.dp)) {
-                Text("Shop", fontSize = 16.sp, color = PubColors.Gold, fontWeight = FontWeight.Bold)
-            }
-            if (GameEngine.anythingAffordable(s)) {
-                Box(
-                    Modifier
-                        .align(Alignment.TopEnd)
-                        .offset(x = 4.dp, y = (-4).dp)
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(PubColors.Red),
-                )
-            }
-        }
+        // Freie Plätze bleiben leer, damit die Knöpfe nicht riesig werden
+        repeat(GameEngine.BAR_SLOTS - GameEngine.barDrinks(s).size) { Spacer(Modifier.weight(1f)) }
     }
 }
 
 /** Ein Getränk zum Antippen; der Hintergrund füllt sich wie ein Balken, bis es wieder bereit ist. */
 @Composable
-private fun DrinkButton(drink: Drink, readiness: Float, secondsLeft: Float, onClick: () -> Unit) {
+private fun DrinkButton(drink: Drink, readiness: Float, secondsLeft: Float, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
     val ready = readiness >= 1f
     Box(
-        Modifier
-            .width(76.dp)
-            .height(84.dp)
+        modifier
+            .height(92.dp)
             .clip(shape)
             .background(PubColors.PanelLight)
             .drawBehind {
@@ -296,17 +299,27 @@ private fun DrinkButton(drink: Drink, readiness: Float, secondsLeft: Float, onCl
             }
             .border(2.dp, if (ready) PubColors.Gold else Color.Transparent, shape)
             .clickable(enabled = ready, onClick = onClick)
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 2.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.graphicsLayer { alpha = if (ready) 1f else 0.55f }) { DrinkIcon(drink, 40.dp) }
-            Text(drink.displayName, color = PubColors.Cream, fontSize = 11.sp, maxLines = 1)
+            Box(Modifier.graphicsLayer { alpha = if (ready) 1f else 0.55f }) { DrinkIcon(drink, 36.dp) }
+            Text(
+                drink.displayName,
+                color = PubColors.Cream,
+                fontSize = if (drink.displayName.length > 10) 9.sp else 11.sp,
+                lineHeight = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
             Text(
                 if (ready) "+${drink.boost.toInt()} Prost!" else "${ceil(secondsLeft * 10f).toInt() / 10f} s",
                 color = if (ready) PubColors.Gold else PubColors.Cream.copy(alpha = 0.7f),
                 fontSize = 11.sp,
+                lineHeight = 13.sp,
                 fontWeight = FontWeight.Bold,
+                maxLines = 1,
             )
         }
     }
