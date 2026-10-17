@@ -9,12 +9,14 @@ import de.alcomon.hubbell.audio.Sfx
 import de.alcomon.hubbell.audio.SoundPlayer
 import de.alcomon.hubbell.data.SaveStore
 import de.alcomon.hubbell.game.Drink
+import de.alcomon.hubbell.game.DrinkGesture
 import de.alcomon.hubbell.game.Falling
 import de.alcomon.hubbell.game.FallingItem
 import de.alcomon.hubbell.game.FallingKind
 import de.alcomon.hubbell.game.GameEngine
 import de.alcomon.hubbell.game.GameState
 import de.alcomon.hubbell.game.RunResult
+import de.alcomon.hubbell.game.SpecialEvent
 import de.alcomon.hubbell.game.Upgrade
 import kotlin.math.ceil
 import kotlin.random.Random
@@ -23,6 +25,9 @@ enum class Screen { TITLE, GAME }
 
 /** Kurz aufsteigender Text über Hubbell, z. B. „+3 Taler“. */
 data class Floater(val id: Long, val text: String, val age: Float = 0f)
+
+/** Das laufende Special Event „Handy hoch und ex!“: Restzeit und wie weit die Bewegung schon ist. */
+data class SpecialChallenge(val secondsLeft: Float, val progress: Float = 0f, val useSensor: Boolean = true)
 
 class GameViewModel(app: Application) : AndroidViewModel(app) {
     private val store = SaveStore(app)
@@ -50,6 +55,15 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     private var fallingSpawn = Falling.nextSpawnDelay()
     private var nextFallingId = 0L
 
+    var special by mutableStateOf<SpecialChallenge?>(null)
+        private set
+    /** Sekunden, die der „EX!“-Jubel nach einem geschafften Special Event noch zu sehen ist. */
+    var specialCheer by mutableStateOf(0f)
+        private set
+    private var specialTimer = SpecialEvent.firstDelay()
+    private val gesture = DrinkGesture()
+    private val motion = MotionSensor(app) { x, y, z, dt -> onMotion(x, y, z, dt) }
+
     private var nextFloaterId = 0L
     private var sinceSave = 0f
 
@@ -60,7 +74,16 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (floaters.isNotEmpty()) {
             floaters = floaters.map { it.copy(age = it.age + dt) }.filter { it.age < FLOATER_LIFETIME }
         }
-        if (screen != Screen.GAME || shopOpen || state.gameOver) return
+        if (specialCheer > 0f) specialCheer = (specialCheer - dt).coerceAtLeast(0f)
+        if (screen != Screen.GAME || shopOpen || state.gameOver) {
+            motion.stop()
+            return
+        }
+        // Während des Special Events steht Hubbells Pegel still, damit niemand beim Trinken verliert
+        if (special != null) {
+            updateSpecial(dt)
+            return
+        }
 
         val before = state
         val after = GameEngine.tick(before, dt)
@@ -70,9 +93,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         state = after
         playEventSounds(before, after, dt)
         updateFalling(dt)
+        updateSpecial(dt)
 
-        if (after.gameOver) {
-            onGameOver(after)
+        if (state.gameOver) {
+            onGameOver(state)
         } else {
             sinceSave += dt
             if (sinceSave > 5f) save()
@@ -129,6 +153,56 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             fallingSpawn = Falling.nextSpawnDelay()
             falling = falling + Falling.spawn(nextFallingId++)
         }
+    }
+
+    private fun updateSpecial(dt: Float) {
+        val current = special
+        if (current == null) {
+            // Nicht mitten in eine Belohnungsanimation hinein ankündigen
+            if (state.pendingRewards.isNotEmpty()) return
+            specialTimer -= dt
+            if (specialTimer <= 0f) {
+                specialTimer = SpecialEvent.nextDelay()
+                gesture.reset()
+                special = SpecialChallenge(SpecialEvent.WINDOW_SECONDS, useSensor = motion.available)
+                sound.play(Sfx.RIFF_3)
+            }
+            return
+        }
+        motion.start()
+        val left = current.secondsLeft - dt
+        if (left <= 0f) {
+            endSpecial()
+            addFloater("Verpasst! Nächstes Mal ex!")
+        } else {
+            special = current.copy(secondsLeft = left, progress = gesture.progress)
+        }
+    }
+
+    private fun onMotion(x: Float, y: Float, z: Float, dt: Float) {
+        if (special == null || shopOpen) return
+        if (gesture.update(x, y, z, dt)) completeSpecial()
+    }
+
+    /** Ohne Bewegungssensor reicht ein Tipp auf die Ansage. */
+    fun tapSpecial() {
+        if (special?.useSensor == false) completeSpecial()
+    }
+
+    private fun completeSpecial() {
+        if (special == null || state.gameOver) return
+        endSpecial()
+        val before = state
+        state = SpecialEvent.reward(before)
+        specialCheer = 2.6f
+        addFloater("EX! +${state.coins - before.coins} Taler, Pegel voll!")
+        sound.play(Sfx.LEVEL_UP)
+    }
+
+    private fun endSpecial() {
+        special = null
+        motion.stop()
+        gesture.reset()
     }
 
     fun toggleSound() {
@@ -199,6 +273,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         floaters = emptyList()
         falling = emptyList()
         fallingSpawn = Falling.nextSpawnDelay()
+        endSpecial()
+        specialCheer = 0f
+        specialTimer = SpecialEvent.firstDelay()
         lastResult = null
         shopOpen = false
         screen = Screen.GAME
@@ -221,12 +298,18 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         if (shopOpen) closeShop() else toTitle()
     }
 
+    fun onPause() {
+        motion.stop()
+        save()
+    }
+
     fun save() {
         sinceSave = 0f
         if (!state.gameOver) store.saveRun(state)
     }
 
     private fun onGameOver(final: GameState) {
+        endSpecial()
         val (updated, result) = stats.record(final)
         stats = updated
         lastResult = result
@@ -235,6 +318,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        motion.stop()
         sound.release()
     }
 

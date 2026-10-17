@@ -144,8 +144,14 @@ fun GameScreen(vm: GameViewModel) {
                     )
                 }
                 val rescue = s.rescueSecondsLeft
-                if (rescue != null && !s.gameOver) {
+                if (rescue != null && !s.gameOver && vm.special == null) {
                     RescueBanner(rescue, time, Modifier.align(Alignment.Center))
+                }
+                vm.special?.let { challenge ->
+                    SpecialBanner(challenge, time, onTap = vm::tapSpecial, modifier = Modifier.align(Alignment.Center))
+                }
+                if (vm.specialCheer > 0f) {
+                    SpecialCheer(vm.specialCheer, Modifier.align(Alignment.Center))
                 }
                 Text(
                     "Tippen = Getränk bringen · über den Kopf wischen = streicheln",
