@@ -122,5 +122,5 @@ enum class Upgrade(
     TOURBUS("Tourbus", "🚌", "Hubbell auf Tour. 3 Taler pro Sekunde und Stufe.", Effect.PASSIVE, 3f, 20000, 5, 20),
     PLATTENVERTRAG("Plattenvertrag", "💿", "Das Album verkauft sich. 6 Taler pro Sekunde und Stufe.", Effect.PASSIVE, 6f, 60000, 5, 25);
 
-    fun cost(currentLevel: Int): Int = (baseCost * 2.2.pow(currentLevel)).roundToInt()
+    fun cost(currentLevel: Int): Int = (baseCost * 1.9.pow(currentLevel)).roundToInt()
 }

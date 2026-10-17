@@ -77,6 +77,16 @@ class GameEngineTest {
         repeat(6) { s = run(GameEngine.serve(s), 1.3f) }
         assertEquals(2, s.level)
         assertEquals(listOf(2), s.pendingRewards)
+        assertTrue(s.coins >= GameEngine.levelUpCoins(2))
+    }
+
+    @Test
+    fun hoeheresLevelZahltMehrTaler() {
+        val low = GameEngine.coinsFor(GameState(pegel = 50f, level = 1), Drink.WHISKY)
+        val high = GameEngine.coinsFor(GameState(pegel = 50f, level = 11), Drink.WHISKY)
+        assertEquals(25, low)
+        assertEquals(45, high)
+        assertTrue(GameEngine.xpForNextLevel(10) < 1000f)
     }
 
     @Test
@@ -97,7 +107,7 @@ class GameEngineTest {
         s = GameEngine.buyUpgrade(s, Upgrade.ZAPFHAHN)
         s = GameEngine.buyUpgrade(s, Upgrade.ZAPFHAHN)
         assertEquals(2, s.upgradeLevel(Upgrade.ZAPFHAHN))
-        assertEquals(1000 - 40 - 88, s.coins)
+        assertEquals(1000 - 40 - 76, s.coins)
     }
 
     @Test

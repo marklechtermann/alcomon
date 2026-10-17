@@ -29,9 +29,15 @@ object GameEngine {
 
     fun rescueSeconds(s: GameState): Float = RESCUE_SECONDS + s.effect(Effect.RESCUE)
 
+    /** Ruhm-Bonus: Mit jedem Level zahlen die Gäste 8 % mehr. */
+    fun fameMultiplier(level: Int): Float = 1f + 0.08f * (level - 1)
+
+    /** Taler, die es beim Erreichen von [level] obendrauf gibt. */
+    fun levelUpCoins(level: Int): Int = 25 * level
+
     /** Taler pro Getränk. Ist Hubbell bestens gelaunt, gibt es mindestens doppelt. */
     fun coinsFor(s: GameState, drink: Drink): Int {
-        var coins = drink.coins * (1f + s.effect(Effect.COINS))
+        var coins = drink.coins * (1f + s.effect(Effect.COINS)) * fameMultiplier(s.level)
         if (s.pegel >= HAPPY_PEGEL) coins *= 2f + s.effect(Effect.MOOD)
         return max(1, coins.roundToInt())
     }
@@ -56,7 +62,8 @@ object GameEngine {
         return gainXp(petted, 2f)
     }
 
-    fun xpForNextLevel(level: Int): Float = (40.0 * level.toDouble().pow(1.6)).toFloat()
+    /** Flachere Kurve als früher (Exponent 1,6), damit es ab Level 10 spürbar schneller weitergeht. */
+    fun xpForNextLevel(level: Int): Float = (40.0 * level.toDouble().pow(1.35)).toFloat()
 
     /** Abstand, in dem das Personal automatisch serviert, oder null ohne Personal. */
     fun waiterInterval(s: GameState): Float? {
@@ -82,13 +89,15 @@ object GameEngine {
     private fun gainXp(s: GameState, amount: Float): GameState {
         var level = s.level
         var xp = s.xp + amount * (1f + s.effect(Effect.XP))
+        var coins = s.coins
         val rewards = s.pendingRewards.toMutableList()
         while (xp >= xpForNextLevel(level)) {
             xp -= xpForNextLevel(level)
             level++
+            coins += levelUpCoins(level)
             rewards += level
         }
-        return s.copy(level = level, xp = xp, pendingRewards = rewards)
+        return s.copy(level = level, xp = xp, coins = coins, pendingRewards = rewards)
     }
 
     fun tick(s: GameState, dt: Float): GameState {
