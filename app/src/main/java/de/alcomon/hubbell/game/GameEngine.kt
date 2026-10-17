@@ -160,6 +160,27 @@ object GameEngine {
         return next
     }
 
+    /** Höchstens so viel Abwesenheit wird nachgerechnet (danach ist Hubbell ohnehin längst nüchtern). */
+    const val MAX_CATCH_UP_SECONDS = 24f * 3600f
+
+    /**
+     * Die Zeit läuft weiter, während das Spiel im Hintergrund oder geschlossen ist: Die verpassten
+     * [seconds] werden in kleinen Schritten nachgerechnet. Fällt der Pegel dabei auf null und läuft
+     * die Rettungsfrist ab, ist die Runde vorbei.
+     */
+    fun catchUp(s: GameState, seconds: Float): GameState {
+        var left = seconds.coerceIn(0f, MAX_CATCH_UP_SECONDS)
+        var state = s
+        while (left > 0f && !state.gameOver) {
+            val step = min(CATCH_UP_STEP, left)
+            state = tick(state, step)
+            left -= step
+        }
+        return state
+    }
+
+    private const val CATCH_UP_STEP = 0.25f
+
     fun select(s: GameState, drink: Drink): GameState =
         if (drink in s.unlocked) s.copy(selected = drink) else s
 

@@ -23,8 +23,12 @@ class SaveStore(context: Context) {
             .putString("run.selected", s.selected.name)
             .putString("run.upgrades", s.upgrades.entries.joinToString(",") { "${it.key.name}:${it.value}" })
             .putFloat("run.rescue", s.rescueSecondsLeft ?: -1f)
+            .putLong("run.savedAt", System.currentTimeMillis())
             .apply()
     }
+
+    /** Wann die Runde zuletzt gespeichert wurde (Systemzeit in ms), 0 wenn unbekannt. */
+    val runSavedAt: Long get() = prefs.getLong("run.savedAt", 0L)
 
     fun loadRun(): GameState? {
         if (!prefs.getBoolean(KEY_RUN, false)) return null

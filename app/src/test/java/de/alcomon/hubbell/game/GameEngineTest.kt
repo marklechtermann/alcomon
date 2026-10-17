@@ -81,6 +81,19 @@ class GameEngineTest {
     }
 
     @Test
+    fun langeAbwesenheitBeendetDieRunde() {
+        val s = GameEngine.catchUp(GameState(pegel = 60f), 30f * 60f)
+        assertTrue(s.gameOver)
+    }
+
+    @Test
+    fun kurzeAbwesenheitLaesstPegelSinken() {
+        val s = GameEngine.catchUp(GameState(pegel = 60f), 10f)
+        assertFalse(s.gameOver)
+        assertEquals(45f, s.pegel, 0.1f)
+    }
+
+    @Test
     fun hoeheresLevelZahltMehrTaler() {
         val low = GameEngine.coinsFor(GameState(pegel = 50f, level = 1), Drink.WHISKY)
         val high = GameEngine.coinsFor(GameState(pegel = 50f, level = 11), Drink.WHISKY)

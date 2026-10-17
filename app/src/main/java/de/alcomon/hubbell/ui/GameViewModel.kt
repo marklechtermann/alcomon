@@ -40,7 +40,7 @@ data class SpecialChallenge(
 class GameViewModel(app: Application) : AndroidViewModel(app) {
     private val store = SaveStore(app)
 
-    var state by mutableStateOf(store.loadRun() ?: GameState())
+    var state by mutableStateOf(GameState())
         private set
     var stats by mutableStateOf(store.loadStats())
         private set
@@ -74,6 +74,18 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     private var nextFloaterId = 0L
     private var sinceSave = 0f
+
+    /** Wann die App in den Hintergrund ging (Systemzeit in ms), solange sie dort ist. */
+    private var pausedAt: Long? = null
+
+    init {
+        val saved = store.loadRun()
+        if (saved != null) {
+            state = saved
+            val savedAt = store.runSavedAt
+            if (savedAt > 0L) catchUpSince(savedAt)
+        }
+    }
 
     val canContinue: Boolean
         get() = !state.gameOver && (state.drinksServed > 0 || state.elapsedSeconds > 1f)
@@ -315,6 +327,34 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     fun onPause() {
         motion.stop()
         save()
+        pausedAt = System.currentTimeMillis()
+    }
+
+    fun onResume() {
+        val since = pausedAt ?: return
+        pausedAt = null
+        catchUpSince(since)
+    }
+
+    /** Die Zeit lief weiter, während man weg war: Pegel nachrechnen, notfalls ist die Runde vorbei. */
+    private fun catchUpSince(since: Long) {
+        if (state.gameOver) return
+        val away = (System.currentTimeMillis() - since) / 1000f
+        if (away < 1f) return
+        val before = state
+        val after = GameEngine.catchUp(before, away)
+        // Belohnungen fürs Leveln im Hintergrund nicht alle nachträglich abspielen
+        state = after.copy(pendingRewards = after.pendingRewards.takeLast(1))
+        if (after.gameOver) {
+            endSpecial()
+            onGameOver(state)
+            // Damit man das Ergebnis sieht, auch wenn man vom Titelbild kommt
+            screen = Screen.GAME
+        } else if (away >= 5f) {
+            val minutes = (away / 60f).toInt()
+            addFloater(if (minutes >= 1) "$minutes Min weg: Pegel ${after.pegel.toInt()} %" else "Pegel ${after.pegel.toInt()} %")
+            save()
+        }
     }
 
     fun save() {
