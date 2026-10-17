@@ -391,7 +391,26 @@ private fun DrawScope.drawHead(
             close()
         }
         drawPath(strand, Hair)
-        drawLine(HairLight, Offset(cx + side * 15f * u, headY + 2f * u), Offset(cx + side * 16.5f * u + flick, headY + 24f * u), strokeWidth = 0.8f * u)
+        // Locken: kleine Kringel an der Außenkante und in der Mähne
+        for (i in 0 until 7) {
+            val f = i / 6f
+            val lx = cx + side * (19.5f + 1.5f * sin(f * 3.1f)) * u + flick * (0.5f + f)
+            val ly = headY - 3f * u + f * 33f * u
+            drawCircle(Hair, (2.6f - 0.6f * f) * u, Offset(lx, ly))
+            drawCircle(Hair, 2.2f * u, Offset(lx - side * 7f * u + flick * f * 0.5f, ly + 1.5f * u))
+        }
+        for (i in 0 until 4) {
+            val ly = headY + 3f * u + i * 7f * u
+            drawArc(
+                HairLight, startAngle = if (i % 2 == 0) 200f else 20f, sweepAngle = 200f, useCenter = false,
+                topLeft = Offset(cx + side * 15.5f * u - 1.6f * u + flick * 0.8f, ly), size = Size(3.2f * u, 3.2f * u),
+                style = Stroke(0.6f * u),
+            )
+        }
+    }
+    // Lockige Kuppe oben auf dem Kopf
+    for (i in -3..3) {
+        drawCircle(Hair, 3.4f * u, Offset(cx + i * 4.6f * u, headY - 14.5f * u + abs(i) * abs(i) * 0.45f * u))
     }
 
     drawCircle(Skin, headR, Offset(cx, headY))
@@ -503,9 +522,23 @@ private fun DrawScope.drawHead(
         drawLine(Beard, base, base + dir, strokeWidth = 0.7f * u, cap = StrokeCap.Round)
     }
 
-    // Knollennase
-    drawCircle(lerp(SkinShade, Color(0xFFE0565B), max(p, age * 0.8f)), 3.9f * u * (1f + 0.25f * age), Offset(cx, headY + 2f * u))
-    drawCircle(Color(0x66FFFFFF), 1.1f * u, Offset(cx - 1.2f * u, headY + 0.8f * u))
+    // Etwas schmalere Nase
+    val noseW = 4.6f * u * (1f + 0.15f * age)
+    val noseH = 7f * u
+    drawOval(lerp(SkinShade, Color(0xFFE0565B), max(p, age * 0.8f)), topLeft = Offset(cx - noseW / 2f, headY - 1.8f * u), size = Size(noseW, noseH))
+    drawOval(Color(0x66FFFFFF), topLeft = Offset(cx - 1.4f * u, headY - 0.6f * u), size = Size(1.2f * u, 2.4f * u))
+
+    // Brille mit schwarzem Rahmen
+    val frame = Color(0xFF0E0E0E)
+    for (sx in listOf(-1f, 1f)) {
+        val c = Offset(cx + sx * ex, eyeY)
+        drawRoundRect(Color(0x22BFE3F5), topLeft = c - Offset(4.2f * u, 3.4f * u), size = Size(8.4f * u, 6.8f * u), cornerRadius = CornerRadius(2.4f * u))
+        drawRoundRect(frame, topLeft = c - Offset(4.2f * u, 3.4f * u), size = Size(8.4f * u, 6.8f * u), cornerRadius = CornerRadius(2.4f * u), style = Stroke(1.1f * u))
+        drawLine(Color(0x88FFFFFF), c + Offset(-2.6f * u, -1.8f * u), c + Offset(-1.2f * u, -2.4f * u), strokeWidth = 0.6f * u, cap = StrokeCap.Round)
+        // Bügel bis in die Haare
+        drawLine(frame, c + Offset(sx * 4.2f * u, -1.2f * u), Offset(cx + sx * 14.5f * u, eyeY - 2f * u), strokeWidth = 1f * u)
+    }
+    drawLine(frame, Offset(cx - ex + 4.2f * u, eyeY - 0.8f * u), Offset(cx + ex - 4.2f * u, eyeY - 0.8f * u), strokeWidth = 1f * u)
 
     // Mund
     val mouthY = headY + 7.5f * u
