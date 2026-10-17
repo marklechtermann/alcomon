@@ -286,23 +286,8 @@ private fun DrawScope.drawHubbell(cx: Float, tableTop: Float, u: Float, pose: Hu
             topLeft = Offset(cx - 6f * u, tableTop - 30f * u), size = Size(12f * u, 6f * u),
             style = Stroke(1.2f * u),
         )
-        // Totenkopf mit Teufelshörnchen und Bierkrug-Augen auf dem Shirt
-        val skull = Offset(cx, tableTop - 17f * u)
-        drawPath(
-            Path().apply {
-                moveTo(skull.x - 4f * u, skull.y - 3f * u)
-                quadraticBezierTo(skull.x - 7f * u, skull.y - 6f * u, skull.x - 6f * u, skull.y - 9f * u)
-                lineTo(skull.x - 2.5f * u, skull.y - 4.5f * u)
-                close()
-                moveTo(skull.x + 4f * u, skull.y - 3f * u)
-                quadraticBezierTo(skull.x + 7f * u, skull.y - 6f * u, skull.x + 6f * u, skull.y - 9f * u)
-                lineTo(skull.x + 2.5f * u, skull.y - 4.5f * u)
-                close()
-            },
-            DevilRed,
-        )
-        drawSkull(skull, 4.5f * u, ShirtPrint, Shirt)
-        drawLine(DevilRed, Offset(cx - 9f * u, tableTop - 6f * u), Offset(cx + 9f * u, tableTop - 6f * u), strokeWidth = 1f * u)
+        // Verschlungenes, völlig unleserliches Death-Metal-Bandlogo auf dem Shirt
+        drawDeathMetalLogo(Offset(cx, tableTop - 18f * u), 30f * u, ShirtPrint, DevilRed)
 
         // Kopf (beim Headbangen nickt er kräftig)
         val bob = abs(sin(pose.time * 14f)) * 4f * u * bang
