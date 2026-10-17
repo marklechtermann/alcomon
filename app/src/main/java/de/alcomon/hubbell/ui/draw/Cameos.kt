@@ -21,7 +21,7 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /** Was ein Gast im Vordergrund in den Händen hält. */
-enum class Prop { HORNS, WHISKY, BEER, DYNAMITE, RUM, DRONE, LAPTOP, COFFEE }
+enum class Prop { HORNS, WHISKY, BEER, DYNAMITE, RUM, DRONE, LAPTOP, COFFEE, AXE, MEAD }
 
 /** Ein Gast, der hin und wieder von unten ins Bild hüpft und etwas reinruft. */
 class Cameo(
@@ -82,6 +82,10 @@ val Cameos = listOf(
     Cameo(
         MetalGuy("Gabi", Color(0xFFF2C6A0), Color(0xFF1A1A1A), HairStyle.LONG, BeardStyle.NONE, Color(0xFF7B1F1F)),
         shout = "PETER!!!", shirtText = "WO IST PETER?", left = Prop.HORNS, right = Prop.BEER, lady = true, loud = true,
+    ),
+    Cameo(
+        MetalGuy("Maik", Color(0xFFF2C6A0), Color(0xFFE0A040), HairStyle.LONG, BeardStyle.LONG, Color(0xFF4E342E), helmet = true, belly = true, height = 1.1f),
+        shout = "Der Generator hat keinen Strom!!!", shirtText = "MAIK", left = Prop.AXE, right = Prop.MEAD, loud = true,
     ),
 )
 
@@ -157,6 +161,10 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
         drawRoundRect(vest, topLeft = Offset(x + torsoW * 0.2f, shoulderY), size = Size(torsoW * 0.3f, 40f * c), cornerRadius = CornerRadius(8f * c))
         drawCircle(Color(0xFFD7263D), 2f * c, Offset(x - torsoW * 0.35f, shoulderY + 8f * c))
         drawRect(Color(0xFFF2B32A), topLeft = Offset(x + torsoW * 0.28f, shoulderY + 7f * c), size = Size(4f * c, 4f * c))
+    }
+    if (look.helmet) {
+        // Fellkragen
+        for (i in -3..3) drawCircle(Color(0xFF8D6E63), 3.2f * c, Offset(x + i * torsoW * 0.13f, shoulderY + 1.5f * c))
     }
     if (cameo.nerd) {
         drawLine(Color(0xFFECEFF1), Offset(x - 3f * c, shoulderY + 1f * c), Offset(x - 3.5f * c, shoulderY + 8f * c), strokeWidth = 0.7f * c)
@@ -296,6 +304,28 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
             // glänzende Stirn
             drawOval(Color(0x66FFFFFF), topLeft = Offset(x - 3.5f * c, top + headR * 0.35f), size = Size(5f * c, 2.6f * c))
         }
+    }
+    if (look.helmet) {
+        // Wikingerhelm mit Hörnern
+        val steel = Color(0xFF9EA7AD)
+        for (side in listOf(-1f, 1f)) {
+            drawPath(
+                Path().apply {
+                    moveTo(x + side * headW * 0.8f, headC.y - headR * 0.55f)
+                    quadraticBezierTo(x + side * headW * 1.9f, headC.y - headR * 0.9f, x + side * headW * 1.7f, headC.y - headR * 2.1f)
+                    quadraticBezierTo(x + side * headW * 1.45f, headC.y - headR * 1.15f, x + side * headW * 0.7f, headC.y - headR * 0.95f)
+                    close()
+                },
+                Color(0xFFF2EDE0),
+            )
+        }
+        drawArc(
+            steel, startAngle = 180f, sweepAngle = 180f, useCenter = true,
+            topLeft = Offset(x - headW * 1.08f, headC.y - headR * 1.25f), size = Size(headW * 2.16f, headR * 1.6f),
+        )
+        drawRect(Color(0xFF6D757A), topLeft = Offset(x - headW * 1.1f, headC.y - headR * 0.5f), size = Size(headW * 2.2f, 2f * c))
+        drawRect(Color(0xFF6D757A), topLeft = Offset(x - 0.8f * c, headC.y - headR * 0.5f), size = Size(1.6f * c, 5f * c)) // Nasenschutz
+        for (i in -2..2) drawCircle(Color(0xFFCFD8DC), 0.5f * c, Offset(x + i * headW * 0.4f, headC.y - headR * 0.4f))
     }
     if (look.hairStyle == HairStyle.PONYTAIL) {
         drawOval(look.hair, topLeft = Offset(x + headW * 0.7f, headC.y - 2f * c), size = Size(4f * c, 12f * c))
@@ -448,6 +478,25 @@ private fun DrawScope.drawProp(prop: Prop, hand: Offset, c: Float, time: Float, 
                 val p = (time * 0.8f + i * 0.5f) % 1f
                 drawCircle(Color(0x88FFFFFF), (0.8f + p) * c, mug + Offset(2f * c + i * 2.4f * c + sin(time * 4f + i) * c, -1f * c - p * 6f * c))
             }
+            drawCircle(skin, 3.2f * c, hand)
+        }
+        Prop.AXE -> {
+            rotate(side * (20f + sin(time * 7f) * 12f), pivot = hand) {
+                drawRect(Color(0xFF6D4C41), topLeft = Offset(hand.x - 0.9f * c, hand.y - 20f * c), size = Size(1.8f * c, 22f * c))
+                drawPath(
+                    Path().apply {
+                        moveTo(hand.x + side * 0.9f * c, hand.y - 19f * c)
+                        quadraticBezierTo(hand.x + side * 9f * c, hand.y - 21f * c, hand.x + side * 8f * c, hand.y - 12f * c)
+                        quadraticBezierTo(hand.x + side * 4f * c, hand.y - 14f * c, hand.x + side * 0.9f * c, hand.y - 13f * c)
+                        close()
+                    },
+                    Color(0xFFB0BEC5),
+                )
+            }
+            drawCircle(skin, 3.2f * c, hand)
+        }
+        Prop.MEAD -> {
+            drawDrink(Drink.MET, hand + Offset(-5f * c, -12f * c), 10f * c, 12f * c, 1f)
             drawCircle(skin, 3.2f * c, hand)
         }
         Prop.DRONE -> {
