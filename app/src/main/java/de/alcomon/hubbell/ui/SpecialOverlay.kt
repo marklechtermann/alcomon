@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,6 +22,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -31,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.alcomon.hubbell.game.Liquid
 import de.alcomon.hubbell.ui.theme.PubColors
 import kotlin.math.ceil
 import kotlin.math.sin
@@ -62,11 +65,17 @@ fun SpecialBanner(challenge: SpecialChallenge, time: () -> Float, onTap: () -> U
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
         )
-        Canvas(Modifier.padding(vertical = 6.dp).size(width = 180.dp, height = 130.dp)) {
-            drawDrinkDemo(time())
+        Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Canvas(Modifier.size(width = 140.dp, height = 110.dp)) {
+                drawDrinkDemo(time())
+            }
+            // Das große Bier folgt live der Handybewegung und leert sich beim Trinken
+            Canvas(Modifier.padding(start = 8.dp).size(width = 96.dp, height = 150.dp)) {
+                drawBigBeer(challenge, time())
+            }
         }
         Text(
-            "Hochheben, ansetzen, nach hinten kippen. Fertig!",
+            "Hochheben, ansetzen, nach hinten kippen und trinken, bis das Glas leer ist!",
             color = PubColors.Cream.copy(alpha = 0.8f),
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
@@ -165,6 +174,65 @@ private fun DrawScope.drawDrinkDemo(time: Float) {
             drawCircle(
                 PubColors.Cream.copy(alpha = 1f - p),
                 3f + 3f * i, mouth + Offset(-r * 0.3f - p * r * 0.5f, -r * (0.5f + p * 1.6f)),
+            )
+        }
+    }
+}
+
+/** Ein großes Bierglas, dessen Inhalt waagerecht bleibt, wenn das Handy gekippt wird. */
+private fun DrawScope.drawBigBeer(challenge: SpecialChallenge, time: Float) {
+    val w = size.width
+    val h = size.height
+    val left = w * 0.12f
+    val top = h * 0.06f
+    val gw = w * 0.76f
+    val gh = h * 0.88f
+    fun toCanvas(poly: List<Pair<Float, Float>>) = Path().apply {
+        poly.forEachIndexed { i, (px, py) ->
+            val ox = left + px * gw
+            val oy = top + py * gh
+            if (i == 0) moveTo(ox, oy) else lineTo(ox, oy)
+        }
+        close()
+    }
+
+    // Glas
+    drawRoundRect(Color(0x33FFFFFF), Offset(left, top), Size(gw, gh), CornerRadius(gw * 0.08f))
+    // Schaum unter dem Bier, dann das Bier selbst
+    val foam = Liquid.polygon(challenge.fill, challenge.downX, challenge.downY, extra = 0.07f)
+    if (foam.size >= 3) drawPath(toCanvas(foam), PubColors.Cream)
+    val beer = Liquid.polygon(challenge.fill, challenge.downX, challenge.downY)
+    if (beer.size >= 3) {
+        drawPath(toCanvas(beer), PubColors.Gold)
+        // aufsteigende Bläschen im Bier
+        repeat(6) { i ->
+            val p = (time * (0.5f + i * 0.13f) + i * 0.37f) % 1f
+            val bx = 0.15f + 0.7f * ((i * 0.61f) % 1f)
+            val by = 1f - p
+            val dot = bx * challenge.downX + by * challenge.downY
+            val surface = beer.minOf { it.first * challenge.downX + it.second * challenge.downY }
+            if (dot > surface + 0.03f) {
+                drawCircle(Color(0x99FFF3D6), 2.2f, Offset(left + bx * gw, top + by * gh))
+            }
+        }
+    }
+    // Glanz und Rand
+    drawRect(Color(0x40FFFFFF), Offset(left + gw * 0.1f, top + gh * 0.08f), Size(gw * 0.08f, gh * 0.8f))
+    drawRoundRect(Color(0xFFE8E4DA), Offset(left, top), Size(gw, gh), CornerRadius(gw * 0.08f), style = Stroke(width = 4f))
+    // Henkel
+    drawRoundRect(
+        Color(0xFFE8E4DA), Offset(left + gw, top + gh * 0.25f), Size(w * 0.11f, gh * 0.4f),
+        CornerRadius(w * 0.05f), style = Stroke(width = 5f),
+    )
+    // Beim Trinken schwappt das Bier oben über den Rand
+    val drinking = challenge.progress >= 0.5f && challenge.fill < 1f && challenge.downY < 0f
+    if (drinking) {
+        repeat(5) { i ->
+            val p = (time * 2.5f + i * 0.2f) % 1f
+            drawCircle(
+                PubColors.Gold.copy(alpha = 1f - p),
+                3f + 2f * (1f - p),
+                Offset(left + gw * (0.3f + 0.1f * i), top - p * h * 0.06f),
             )
         }
     }

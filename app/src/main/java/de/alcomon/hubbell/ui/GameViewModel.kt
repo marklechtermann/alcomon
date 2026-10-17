@@ -27,7 +27,15 @@ enum class Screen { TITLE, GAME }
 data class Floater(val id: Long, val text: String, val age: Float = 0f)
 
 /** Das laufende Special Event „Handy hoch und ex!“: Restzeit und wie weit die Bewegung schon ist. */
-data class SpecialChallenge(val secondsLeft: Float, val progress: Float = 0f, val useSensor: Boolean = true)
+data class SpecialChallenge(
+    val secondsLeft: Float,
+    val progress: Float = 0f,
+    val useSensor: Boolean = true,
+    /** Füllstand und Lage des großen Biers auf dem Display, folgt live der Handybewegung */
+    val fill: Float = 1f,
+    val downX: Float = 0f,
+    val downY: Float = 1f,
+)
 
 class GameViewModel(app: Application) : AndroidViewModel(app) {
     private val store = SaveStore(app)
@@ -175,7 +183,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             endSpecial()
             addFloater("Verpasst! Nächstes Mal ex!")
         } else {
-            special = current.copy(secondsLeft = left, progress = gesture.progress)
+            special = current.copy(
+                secondsLeft = left,
+                progress = gesture.progress,
+                fill = gesture.fill,
+                downX = gesture.downX,
+                downY = gesture.downY,
+            )
         }
     }
 
