@@ -21,7 +21,7 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /** Was ein Gast im Vordergrund in den Händen hält. */
-enum class Prop { HORNS, WHISKY, BEER, DYNAMITE, RUM, DRONE }
+enum class Prop { HORNS, WHISKY, BEER, DYNAMITE, RUM, DRONE, LAPTOP, COFFEE }
 
 /** Ein Gast, der hin und wieder von unten ins Bild hüpft und etwas reinruft. */
 class Cameo(
@@ -32,6 +32,10 @@ class Cameo(
     val right: Prop,
     val slimFace: Boolean = false,
     val lady: Boolean = false,
+    /** Kapuzenpulli und dicke Nerdbrille */
+    val nerd: Boolean = false,
+    /** Ruft so laut, dass die Sprechblase riesig wird */
+    val loud: Boolean = false,
 )
 
 val Cameos = listOf(
@@ -71,6 +75,14 @@ val Cameos = listOf(
         MetalGuy("Zora", Color(0xFFA9714B), Color(0xFF2A1D16), HairStyle.PONYTAIL, BeardStyle.NONE, Color(0xFF1E3B1E)),
         shout = "Mosh for Hubbell!", shirtText = "\\m/", left = Prop.HORNS, right = Prop.HORNS, lady = true,
     ),
+    Cameo(
+        MetalGuy("Kevin", Color(0xFFF7D9BE), Color(0xFF6D4C41), HairStyle.CURLY, BeardStyle.NONE, Color(0xFF607D8B)),
+        shout = "JÜRGEN!!!", shirtText = "works on my machine", left = Prop.LAPTOP, right = Prop.COFFEE, nerd = true, loud = true,
+    ),
+    Cameo(
+        MetalGuy("Gabi", Color(0xFFF2C6A0), Color(0xFF1A1A1A), HairStyle.LONG, BeardStyle.NONE, Color(0xFF7B1F1F)),
+        shout = "PETER!!!", shirtText = "WO IST PETER?", left = Prop.HORNS, right = Prop.BEER, lady = true, loud = true,
+    ),
 )
 
 private const val CAMEO_PERIOD = 11f
@@ -102,7 +114,8 @@ fun DrawScope.drawCameos(time: Float, u: Float) {
     val k = floor(shifted / CAMEO_PERIOD).toInt()
     val t = shifted - k * CAMEO_PERIOD
     if (t > CAMEO_LENGTH) return
-    val cameo = Cameos[((k * 4) % Cameos.size + Cameos.size) % Cameos.size]
+    // 7 ist teilerfremd zur Anzahl der Gäste, so kommt jeder mal dran
+    val cameo = Cameos[((k * 7) % Cameos.size + Cameos.size) % Cameos.size]
     val fromLeft = k % 2 == 0
     val x = if (fromLeft) size.width * 0.17f else size.width * 0.83f
 
@@ -126,6 +139,11 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
     val headR = 9f * c
     val headW = if (cameo.slimFace) headR * 0.82f else headR
 
+    // Kapuze hinter dem Kopf
+    if (cameo.nerd) {
+        drawOval(look.shirt, topLeft = Offset(x - headW * 1.45f, headC.y - headR * 1.3f), size = Size(headW * 2.9f, headR * 2.9f))
+        drawOval(Color(0x33000000), topLeft = Offset(x - headW * 1.2f, headC.y - headR * 1.05f), size = Size(headW * 2.4f, headR * 2.4f))
+    }
     // Haare hinter dem Kopf
     if (look.hairStyle == HairStyle.LONG || look.hairStyle == HairStyle.CURLY) {
         drawRoundRect(look.hair, topLeft = Offset(x - headW * 1.3f, headC.y - headR * 0.6f), size = Size(headW * 2.6f, headR * 2.6f), cornerRadius = CornerRadius(headR))
@@ -139,6 +157,11 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
         drawRoundRect(vest, topLeft = Offset(x + torsoW * 0.2f, shoulderY), size = Size(torsoW * 0.3f, 40f * c), cornerRadius = CornerRadius(8f * c))
         drawCircle(Color(0xFFD7263D), 2f * c, Offset(x - torsoW * 0.35f, shoulderY + 8f * c))
         drawRect(Color(0xFFF2B32A), topLeft = Offset(x + torsoW * 0.28f, shoulderY + 7f * c), size = Size(4f * c, 4f * c))
+    }
+    if (cameo.nerd) {
+        drawLine(Color(0xFFECEFF1), Offset(x - 3f * c, shoulderY + 1f * c), Offset(x - 3.5f * c, shoulderY + 8f * c), strokeWidth = 0.7f * c)
+        drawLine(Color(0xFFECEFF1), Offset(x + 3f * c, shoulderY + 1f * c), Offset(x + 3.5f * c, shoulderY + 8f * c), strokeWidth = 0.7f * c)
+        drawRoundRect(Color(0x33000000), topLeft = Offset(x - torsoW * 0.3f, shoulderY + 24f * c), size = Size(torsoW * 0.6f, 9f * c), cornerRadius = CornerRadius(3f * c))
     }
     val text = cameo.shirtText
     if (text != null) {
@@ -165,6 +188,15 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
         drawRoundRect(Color(0xFF111111), topLeft = Offset(x - 7f * c, eyeY - 2f * c), size = Size(6f * c, 3.6f * c), cornerRadius = CornerRadius(1f * c))
         drawRoundRect(Color(0xFF111111), topLeft = Offset(x + 1f * c, eyeY - 2f * c), size = Size(6f * c, 3.6f * c), cornerRadius = CornerRadius(1f * c))
         drawLine(Color(0xFF111111), Offset(x - 1f * c, eyeY - 1f * c), Offset(x + 1f * c, eyeY - 1f * c), strokeWidth = 0.8f * c)
+    } else if (cameo.nerd) {
+        // dicke Nerdbrille, dahinter weit aufgerissene Augen
+        for (sx in listOf(-1f, 1f)) {
+            val eye = Offset(x + sx * 3.6f * c, eyeY)
+            drawCircle(Color.White, 2.6f * c, eye)
+            drawCircle(Color(0xFF2B1A12), 1f * c, eye + Offset(-sx * 0.4f * c, 0f))
+            drawCircle(Color(0xFF111111), 3f * c, eye, style = Stroke(1f * c))
+        }
+        drawLine(Color(0xFF111111), Offset(x - 0.6f * c, eyeY), Offset(x + 0.6f * c, eyeY), strokeWidth = 1f * c)
     } else {
         // vor Begeisterung zugekniffene Augen
         for (sx in listOf(-1f, 1f)) {
@@ -283,7 +315,15 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
     drawProp(cameo.left, leftHand, c, time, look.skin, -1f)
     drawProp(cameo.right, rightHand, c, time, look.skin, 1f)
 
-    if (showShout) drawShout(cameo.shout, Offset(x + towardCenter * 22f * c, headC.y - 20f * c), c, towardCenter)
+    if (showShout) {
+        if (cameo.loud) {
+            // So laut, dass die Blase bebt
+            val shake = sin(time * 60f) * 0.8f * c
+            drawShout(cameo.shout, Offset(x + towardCenter * 26f * c + shake, headC.y - 22f * c), c * 1.9f, towardCenter, Color(0xFFD7263D))
+        } else {
+            drawShout(cameo.shout, Offset(x + towardCenter * 22f * c, headC.y - 20f * c), c, towardCenter)
+        }
+    }
 }
 
 private fun wrap(text: String, paint: Paint, maxWidth: Float): List<String> {
@@ -304,10 +344,10 @@ private fun wrap(text: String, paint: Paint, maxWidth: Float): List<String> {
     return lines
 }
 
-private fun DrawScope.drawShout(text: String, anchor: Offset, c: Float, towardCenter: Float) {
+private fun DrawScope.drawShout(text: String, anchor: Offset, c: Float, towardCenter: Float, ink: Color = Color(0xFF1A1A1A)) {
     drawIntoCanvas { canvas ->
         ShoutPaint.textSize = 4.6f * c
-        ShoutPaint.color = Color(0xFF1A1A1A).toArgb()
+        ShoutPaint.color = ink.toArgb()
         val lines = wrap(text, ShoutPaint, 44f * c)
         val width = lines.maxOf { ShoutPaint.measureText(it) } + 6f * c
         val height = lines.size * 5.6f * c + 4f * c
@@ -378,6 +418,35 @@ private fun DrawScope.drawProp(prop: Prop, hand: Offset, c: Float, time: Float, 
                     LabelPaint.textSize = 2.4f * c
                     canvas.nativeCanvas.drawText("RUM", hand.x, hand.y - 6.6f * c, LabelPaint)
                 }
+            }
+            drawCircle(skin, 3.2f * c, hand)
+        }
+        Prop.LAPTOP -> {
+            // Aufgeklappter Laptop mit rotem Fehlerbildschirm
+            rotate(side * 8f + sin(time * 5f) * 4f, pivot = hand) {
+                val screen = Offset(hand.x - 8f * c, hand.y - 13f * c)
+                drawRoundRect(Color(0xFF37474F), topLeft = screen, size = Size(16f * c, 11f * c), cornerRadius = CornerRadius(1f * c))
+                val blink = if (sin(time * 9f) > 0f) Color(0xFFD32F2F) else Color(0xFF8E1B1B)
+                drawRect(blink, topLeft = screen + Offset(1f * c, 1f * c), size = Size(14f * c, 9f * c))
+                drawRect(Color(0xFF263238), topLeft = Offset(hand.x - 9f * c, hand.y - 2f * c), size = Size(18f * c, 2f * c))
+                drawIntoCanvas { canvas ->
+                    LabelPaint.color = Color.White.toArgb()
+                    LabelPaint.textSize = 2.6f * c
+                    canvas.nativeCanvas.drawText("ERROR", hand.x, hand.y - 8.5f * c, LabelPaint)
+                    LabelPaint.textSize = 1.8f * c
+                    canvas.nativeCanvas.drawText("NullPointer", hand.x, hand.y - 5.6f * c, LabelPaint)
+                }
+            }
+            drawCircle(skin, 3.2f * c, hand)
+        }
+        Prop.COFFEE -> {
+            val mug = Offset(hand.x - 3.2f * c, hand.y - 9f * c)
+            drawRoundRect(Color(0xFFF5F5F5), topLeft = mug, size = Size(6.4f * c, 8f * c), cornerRadius = CornerRadius(1f * c))
+            drawRect(Color(0xFF4E342E), topLeft = mug + Offset(0.6f * c, 0.6f * c), size = Size(5.2f * c, 1.2f * c))
+            drawCircle(Color(0xFFF5F5F5), 2f * c, mug + Offset(7f * c, 4f * c), style = Stroke(1f * c))
+            for (i in 0..1) {
+                val p = (time * 0.8f + i * 0.5f) % 1f
+                drawCircle(Color(0x88FFFFFF), (0.8f + p) * c, mug + Offset(2f * c + i * 2.4f * c + sin(time * 4f + i) * c, -1f * c - p * 6f * c))
             }
             drawCircle(skin, 3.2f * c, hand)
         }
