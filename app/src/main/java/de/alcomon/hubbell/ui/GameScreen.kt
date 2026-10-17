@@ -150,6 +150,7 @@ fun GameScreen(vm: GameViewModel) {
                 vm.special?.let { challenge ->
                     SpecialBanner(challenge, time, onTap = vm::tapSpecial, modifier = Modifier.align(Alignment.Center))
                 }
+                AppVersion(Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 6.dp))
                 if (vm.specialCheer > 0f) {
                     SpecialCheer(vm.specialCheer, Modifier.align(Alignment.Center))
                 }

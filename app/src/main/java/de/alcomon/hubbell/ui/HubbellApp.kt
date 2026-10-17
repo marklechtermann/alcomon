@@ -112,5 +112,6 @@ private fun TitleScreen(vm: GameViewModel) {
                 }
             }
         }
+        AppVersion(Modifier.align(Alignment.BottomEnd).systemBarsPadding().padding(8.dp))
     }
 }
