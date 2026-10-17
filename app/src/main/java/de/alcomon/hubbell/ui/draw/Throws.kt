@@ -26,6 +26,7 @@ enum class ThrownKind(val reaction: String, val knocksOver: Boolean) {
     WACKEN("Aua! Wacken ruft!", true),
     BIERFLASCHE("Aua! Aber danke!", true),
     WASSERFLASCHE("Iiih! WASSER!!!", false),
+    WHISKY("Aua! Aber Malts of Scotland, Slàinte!", true),
 }
 
 /** Was gerade mit Hubbell passiert, weil ihn etwas getroffen hat. */
@@ -119,6 +120,7 @@ fun DrawScope.drawThrownObject(knock: Knock, head: Offset, u: Float) {
             ThrownKind.WACKEN -> drawWackenSign(pos, s, alpha)
             ThrownKind.BIERFLASCHE -> drawBottle(pos, s, alpha, Color(0xFF6D3B12), Color(0xFFF2E6C9), "BIER", Color(0xFFD7263D))
             ThrownKind.WASSERFLASCHE -> drawBottle(pos, s, alpha, Color(0xAA9FD3E8), Color(0xFFFFFFFF), "H2O", Color(0xFF1565C0))
+            ThrownKind.WHISKY -> drawWhiskyBottle(pos, s, alpha)
         }
     }
     // Aufprall-Sterne
@@ -212,4 +214,25 @@ private fun DrawScope.drawBottle(c: Offset, s: Float, alpha: Float, glass: Color
         canvas.nativeCanvas.drawText(text, c.x, c.y + 3.2f * s, SignPaint)
     }
     drawLine(Color.White.copy(alpha = 0.4f * alpha), c + Offset(-1.8f * s, -3f * s), c + Offset(-1.8f * s, 6f * s), strokeWidth = 0.6f * s)
+}
+
+/** Eckige Whiskyflasche mit Etikett „Malts of Scotland“. */
+private fun DrawScope.drawWhiskyBottle(c: Offset, s: Float, alpha: Float) {
+    val amber = Color(0xCCB86B1C).copy(alpha = 0.8f * alpha)
+    drawRoundRect(amber, topLeft = c - Offset(4f * s, 5f * s), size = Size(8f * s, 14f * s), cornerRadius = CornerRadius(0.8f * s))
+    drawRoundRect(amber, topLeft = c - Offset(1.4f * s, 9.5f * s), size = Size(2.8f * s, 5f * s), cornerRadius = CornerRadius(0.6f * s))
+    drawRect(Color(0xFF3E2723).copy(alpha = alpha), topLeft = c - Offset(1.7f * s, 11.2f * s), size = Size(3.4f * s, 2f * s))
+    // Etikett
+    drawRect(Color(0xFFF4EBD4).copy(alpha = alpha), topLeft = c - Offset(3.4f * s, 1.5f * s), size = Size(6.8f * s, 7.5f * s))
+    drawRect(Color(0xFF1B3A5C).copy(alpha = alpha), topLeft = c - Offset(3.4f * s, 1.5f * s), size = Size(6.8f * s, 7.5f * s), style = Stroke(0.35f * s))
+    drawIntoCanvas { canvas ->
+        SignPaint.color = Color(0xFF1B3A5C).copy(alpha = alpha).toArgb()
+        SignPaint.textSize = 1.5f * s
+        canvas.nativeCanvas.drawText("MALTS OF", c.x, c.y + 1.4f * s, SignPaint)
+        canvas.nativeCanvas.drawText("SCOTLAND", c.x, c.y + 3.2f * s, SignPaint)
+        SignPaint.color = Color(0xFF8E1B2E).copy(alpha = alpha).toArgb()
+        SignPaint.textSize = 1.1f * s
+        canvas.nativeCanvas.drawText("SINGLE MALT", c.x, c.y + 5.2f * s, SignPaint)
+    }
+    drawLine(Color.White.copy(alpha = 0.35f * alpha), c + Offset(-3f * s, -4f * s), c + Offset(-3f * s, 8f * s), strokeWidth = 0.6f * s)
 }

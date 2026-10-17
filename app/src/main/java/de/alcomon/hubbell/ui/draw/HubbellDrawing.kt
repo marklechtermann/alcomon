@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -52,6 +53,8 @@ data class HubbellPose(
     val petGlow: Float = 0f,
     val startled: Boolean = false,
     val dizzy: Boolean = false,
+    /** Peters Foto für das Poster an der Wand */
+    val photo: ImageBitmap? = null,
 )
 
 /** Wo Hubbells Kopf sitzt (für Streicheln und Würfe). */
@@ -68,7 +71,7 @@ private fun rotateAround(p: Offset, pivot: Offset, degrees: Float): Offset {
 
 /** Kneipe, Stuhl, Hubbell, Tisch und das nächste Getränk. */
 fun DrawScope.drawHubbellScene(pose: HubbellPose) {
-    drawMetalBar(pose.time)
+    drawMetalBar(pose.time, pose.photo)
     val w = size.width
     val h = size.height
     val u = min(w / 100f, h / 118f)
@@ -132,7 +135,7 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
 }
 
 /** Dunkle Metal-Bar mit Backsteinwand, schiefen Bandpostern und rotem Neonlicht. */
-fun DrawScope.drawMetalBar(time: Float) {
+fun DrawScope.drawMetalBar(time: Float, photo: ImageBitmap? = null) {
     val w = size.width
     val h = size.height
     drawRect(Brush.verticalGradient(listOf(Color(0xFF2A2326), Color(0xFF151214))))
@@ -184,7 +187,7 @@ fun DrawScope.drawMetalBar(time: Float) {
     drawRect(Color(0xFF3A3A40), topLeft = Offset(w * 0.03f, shelfY), size = Size(w * 0.94f, h * 0.018f))
 
     // Poster, die ständig von wechselnden Metallern ausgetauscht werden
-    drawPosterWall(time, floorY = h * 0.6f)
+    drawPosterWall(time, floorY = h * 0.6f, photo = photo)
 
     // Theke unten
     drawRect(Color(0xFF1A1416), topLeft = Offset(0f, h * 0.6f), size = Size(w, h * 0.4f))

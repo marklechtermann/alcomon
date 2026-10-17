@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -16,9 +17,12 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -60,6 +64,16 @@ class PosterDesign(
     val ink: Color,
     val motif: Int,
     val font: Int,
+    /** Statt eines Motivs hängt Peters Foto drin */
+    val photo: Boolean = false,
+)
+
+/** Echte Festivals und Peters Foto, die zwischen den Band-Postern immer wieder aufgehängt werden. */
+val SpecialPosters = listOf(
+    PosterDesign("WACKEN OPEN AIR", "W:O:A · RAIN OR SHINE", Color(0xFF111111), Color(0xFFF2EDE0), motif = 0, font = 0),
+    PosterDesign("PETER", "EIGENTLICH BIN ICH GANZ ANDERS", Color(0xFF151515), Color(0xFFF2EDE0), motif = 0, font = 0, photo = true),
+    PosterDesign("SUMMER BREEZE", "OPEN AIR · DINKELSBÜHL", Color(0xFF4A148C), Color(0xFFFFD27A), motif = 2, font = 1),
+    PosterDesign("BALTIC OPEN AIR", "AN DER OSTSEE", Color(0xFF0D2B45), Color(0xFF9FD3E8), motif = 6, font = 2),
 )
 
 /** 50 erfundene Metal-Bands, jede mit eigenem Motiv, Farben und Schrift. */
@@ -138,7 +152,14 @@ private fun floorMod(a: Int, b: Int): Int = ((a % b) + b) % b
 
 /** Welches Poster beim Tausch Nummer [k] neu aufgehängt wird. 13 ist teilerfremd zu 50,
  *  dadurch hängen nie zwei gleiche Poster gleichzeitig und alle 50 kommen dran. */
-private fun posterForSwap(k: Int): PosterDesign = PosterDesigns[floorMod(k * 13 + 7, PosterDesigns.size)]
+private fun posterForSwap(k: Int): PosterDesign =
+    // Jeder fünfte Tausch bringt ein Festival-Poster oder Peters Foto. Bei 4 Plätzen und
+    // 4 Sonderpostern hängt dabei nie dasselbe doppelt.
+    if (floorMod(k, 5) == 2) SpecialPosters[floorMod(k / 5, SpecialPosters.size)]
+    else PosterDesigns[floorMod(k * 13 + 7, PosterDesigns.size)]
+
+/** Peters Foto für das Foto-Poster; wird bei jedem Zeichnen der Wand gesetzt. */
+private var wallPhoto: ImageBitmap? = null
 
 private fun guyForSwap(k: Int): MetalGuy = MetalGuys[floorMod(k * 3, MetalGuys.size)]
 
@@ -154,7 +175,8 @@ private fun smoothStep(x: Float): Float {
  * nimmt ein Poster ab, hängt ein neues auf und verschwindet mit dem alten unterm Arm.
  * [floorY] ist die Höhe der Theke, hinter der die Beine verschwinden.
  */
-fun DrawScope.drawPosterWall(time: Float, floorY: Float) {
+fun DrawScope.drawPosterWall(time: Float, floorY: Float, photo: ImageBitmap? = null) {
+    wallPhoto = photo
     val k = floor(time / SWAP_PERIOD).toInt()
     val phase = time - k * SWAP_PERIOD
     val activeSlot = slotForSwap(k)
@@ -462,7 +484,24 @@ private fun DrawScope.drawPoster(p: PosterDesign, slot: Slot, time: Float, revea
             drawRect(Color(0x55000000), topLeft = Offset(left + pw * 0.04f, top + ph * 0.05f), size = Size(pw, ph))
             drawRect(p.background, topLeft = Offset(left, top), size = Size(pw, ph))
             drawRect(p.ink.copy(alpha = 0.6f), topLeft = Offset(left, top), size = Size(pw, ph), style = Stroke(pw * 0.02f))
-            drawMotif(p, Offset(left + pw / 2f, top + ph * 0.56f), min(pw, ph) * 0.2f)
+            val image = wallPhoto
+            if (p.photo && image != null) {
+                // Foto mittig zuschneiden, damit es den Bereich unter dem Titel füllt
+                val boxW = pw * 0.84f
+                val boxH = ph * 0.58f
+                val scale = maxOf(boxW / image.width, boxH / image.height)
+                val srcW = (boxW / scale).roundToInt().coerceAtMost(image.width)
+                val srcH = (boxH / scale).roundToInt().coerceAtMost(image.height)
+                drawImage(
+                    image,
+                    srcOffset = IntOffset((image.width - srcW) / 2, 0),
+                    srcSize = IntSize(srcW, srcH),
+                    dstOffset = IntOffset((left + (pw - boxW) / 2f).roundToInt(), (top + ph * 0.29f).roundToInt()),
+                    dstSize = IntSize(boxW.roundToInt(), boxH.roundToInt()),
+                )
+            } else {
+                drawMotif(p, Offset(left + pw / 2f, top + ph * 0.56f), min(pw, ph) * 0.2f)
+            }
             drawIntoCanvas { canvas ->
                 TitlePaint.typeface = Fonts[p.font]
                 TitlePaint.color = p.ink.toArgb()
@@ -471,6 +510,7 @@ private fun DrawScope.drawPoster(p: PosterDesign, slot: Slot, time: Float, revea
                 canvas.nativeCanvas.drawText(p.band, left + pw / 2f, top + ph * 0.24f, TitlePaint)
                 TagPaint.color = p.ink.copy(alpha = 0.85f).toArgb()
                 TagPaint.textSize = ph * 0.09f
+                while (TagPaint.measureText(p.tagline) > pw * 0.94f && TagPaint.textSize > 3f) TagPaint.textSize *= 0.92f
                 canvas.nativeCanvas.drawText(p.tagline, left + pw / 2f, top + ph * 0.93f, TagPaint)
             }
         }

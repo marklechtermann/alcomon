@@ -110,6 +110,7 @@ fun GameScreen(vm: GameViewModel) {
                         }
                     },
             ) {
+                val photo = ImageBitmap.imageResource(R.drawable.flying_photo)
                 Canvas(Modifier.fillMaxSize()) {
                     drawHubbellScene(
                         HubbellPose(
@@ -121,10 +122,10 @@ fun GameScreen(vm: GameViewModel) {
                             alarm = s.inRescue,
                             runSeconds = s.elapsedSeconds,
                             petGlow = s.petGlow,
+                            photo = photo,
                         ),
                     )
                 }
-                val photo = ImageBitmap.imageResource(R.drawable.flying_photo)
                 Canvas(Modifier.fillMaxSize()) {
                     vm.falling.forEach { drawFallingItem(it, time()) }
                     drawFlyingPhoto(photo, time())
