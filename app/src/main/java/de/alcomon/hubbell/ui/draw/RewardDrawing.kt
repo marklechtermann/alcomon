@@ -21,7 +21,6 @@ private val Palette = listOf(
     Color(0xFFF2B32A), Color(0xFFE0565B), Color(0xFF6CC060), Color(0xFF3FA7D6),
     Color(0xFFFF5FA2), Color(0xFFB388FF), Color(0xFFFFFBF0),
 )
-private val Skins = listOf(Color(0xFFF5C9A0), Color(0xFFD9A47A), Color(0xFFA9714B), Color(0xFF7A4E2D))
 
 class ConfettiPiece(
     val x: Float, val delay: Float, val speed: Float, val color: Color,
@@ -30,13 +29,10 @@ class ConfettiPiece(
 
 class Burst(val x: Float, val y: Float, val t0: Float, val color: Color, val count: Int, val radius: Float)
 
-class Partygoer(val x: Float, val color: Color, val skin: Color, val scale: Float, val phase: Float, val hasBeer: Boolean)
-
 /** Vorberechnete Zufallsteilchen, damit die Animation über alle Frames stabil bleibt. */
 class RewardParticles(
     val confetti: List<ConfettiPiece>,
     val bursts: List<Burst>,
-    val crowd: List<Partygoer>,
 ) {
     companion object {
         fun create(kind: RewardKind, seed: Int): RewardParticles {
@@ -73,21 +69,7 @@ class RewardParticles(
                     radius = 0.14f + r.nextFloat() * 0.1f,
                 )
             }
-            val crowd = if (kind == RewardKind.PARTY || kind == RewardKind.GROSSES_FEST) {
-                List(9) { i ->
-                    Partygoer(
-                        x = (i + 0.5f) / 9f + (r.nextFloat() - 0.5f) * 0.04f,
-                        color = Palette.random(r),
-                        skin = Skins.random(r),
-                        scale = 0.85f + r.nextFloat() * 0.3f,
-                        phase = r.nextFloat() * 6.28f,
-                        hasBeer = r.nextBoolean(),
-                    )
-                }
-            } else {
-                emptyList()
-            }
-            return RewardParticles(confetti, bursts, crowd)
+            return RewardParticles(confetti, bursts)
         }
     }
 }
@@ -103,7 +85,6 @@ fun DrawScope.drawReward(kind: RewardKind, particles: RewardParticles, t: Float,
     }
     if (kind == RewardKind.GROSSES_FEST) drawDisco(t, fade * 0.6f)
     particles.bursts.forEach { drawBurst(it, t, fade) }
-    if (particles.crowd.isNotEmpty()) drawCrowd(particles.crowd, t, fade)
     drawConfetti(particles.confetti, t, fade)
 }
 
@@ -158,41 +139,6 @@ private fun DrawScope.drawBurst(b: Burst, t: Float, fade: Float) {
     }
     if (dt < 0.15f) {
         drawCircle(Color.White.copy(alpha = (1f - dt / 0.15f) * fade), minD * 0.05f, target)
-    }
-}
-
-private fun DrawScope.drawCrowd(crowd: List<Partygoer>, t: Float, fade: Float) {
-    val w = size.width
-    val h = size.height
-    val enter = (1f - (t / 0.6f).coerceIn(0f, 1f)) * h * 0.25f
-    for (p in crowd) {
-        val jump = abs(sin(t * 7f + p.phase)) * 0.035f * h
-        val bodyW = w * 0.09f * p.scale
-        val bodyH = h * 0.12f * p.scale
-        val baseX = p.x * w
-        val bottom = h + 0.02f * h - jump + enter
-        val top = bottom - bodyH
-        val color = p.color.copy(alpha = fade)
-        val wave = sin(t * 9f + p.phase) * 0.3f
-        val leftHand = Offset(baseX - bodyW * (0.75f + wave * 0.3f), top - bodyW * 0.9f)
-        val rightHand = Offset(baseX + bodyW * (0.75f - wave * 0.3f), top - bodyW * 0.9f)
-        drawLine(color, Offset(baseX - bodyW * 0.35f, top + bodyW * 0.2f), leftHand, strokeWidth = bodyW * 0.2f, cap = StrokeCap.Round)
-        drawLine(color, Offset(baseX + bodyW * 0.35f, top + bodyW * 0.2f), rightHand, strokeWidth = bodyW * 0.2f, cap = StrokeCap.Round)
-        if (p.hasBeer) {
-            drawRoundRect(
-                Color(0xFFF2B32A).copy(alpha = fade),
-                topLeft = Offset(rightHand.x - bodyW * 0.15f, rightHand.y - bodyW * 0.45f),
-                size = Size(bodyW * 0.3f, bodyW * 0.4f),
-                cornerRadius = CornerRadius(bodyW * 0.05f),
-            )
-            drawCircle(Color(0xFFFFFBF0).copy(alpha = fade), bodyW * 0.14f, Offset(rightHand.x, rightHand.y - bodyW * 0.45f))
-        }
-        drawRoundRect(color, topLeft = Offset(baseX - bodyW / 2f, top), size = Size(bodyW, bodyH + h * 0.05f), cornerRadius = CornerRadius(bodyW * 0.4f))
-        val head = Offset(baseX, top - bodyW * 0.42f)
-        drawCircle(p.skin.copy(alpha = fade), bodyW * 0.42f, head)
-        drawCircle(Color(0xFF3B2414).copy(alpha = fade), bodyW * 0.12f, head + Offset(0f, bodyW * 0.16f))
-        drawCircle(Color(0xFF3B2414).copy(alpha = fade), bodyW * 0.05f, head + Offset(-bodyW * 0.15f, -bodyW * 0.08f))
-        drawCircle(Color(0xFF3B2414).copy(alpha = fade), bodyW * 0.05f, head + Offset(bodyW * 0.15f, -bodyW * 0.08f))
     }
 }
 

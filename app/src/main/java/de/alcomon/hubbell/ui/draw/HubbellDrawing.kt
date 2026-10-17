@@ -117,6 +117,8 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
 
     // Gäste, die ab und zu von unten ins Bild hüpfen
     drawCameos(pose.time, u)
+    // Jockel surft ab und zu über die Menge
+    drawCrowdsurf(pose.time, u)
 
     if (knock != null) {
         val seated = Offset(cx, tableTop - 41f * u)
