@@ -39,12 +39,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.alcomon.hubbell.R
 import de.alcomon.hubbell.game.Drink
 import de.alcomon.hubbell.game.GameEngine
 import de.alcomon.hubbell.game.GameState
@@ -52,6 +55,7 @@ import de.alcomon.hubbell.game.Rewards
 import de.alcomon.hubbell.game.RunResult
 import de.alcomon.hubbell.ui.draw.HubbellPose
 import de.alcomon.hubbell.ui.draw.drawFallingItem
+import de.alcomon.hubbell.ui.draw.drawFlyingPhoto
 import de.alcomon.hubbell.ui.draw.drawHubbellScene
 import de.alcomon.hubbell.ui.draw.hubbellHead
 import de.alcomon.hubbell.ui.theme.PubColors
@@ -120,8 +124,10 @@ fun GameScreen(vm: GameViewModel) {
                         ),
                     )
                 }
+                val photo = ImageBitmap.imageResource(R.drawable.flying_photo)
                 Canvas(Modifier.fillMaxSize()) {
                     vm.falling.forEach { drawFallingItem(it, time()) }
+                    drawFlyingPhoto(photo, time())
                 }
                 Column(
                     Modifier.align(Alignment.TopEnd).padding(top = 12.dp, end = 12.dp),

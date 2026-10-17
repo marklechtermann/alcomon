@@ -36,6 +36,10 @@ class Cameo(
     val nerd: Boolean = false,
     /** Ruft so laut, dass die Sprechblase riesig wird */
     val loud: Boolean = false,
+    /** Schwarze Basecap mit farbigem Schirmrand */
+    val capBrim: Color? = null,
+    /** Shirt mit aufgedrucktem Foto */
+    val photoShirt: Boolean = false,
 )
 
 val Cameos = listOf(
@@ -44,8 +48,9 @@ val Cameos = listOf(
         shout = "Ich mag Whisky!", shirtText = "DRAM CLAN", left = Prop.HORNS, right = Prop.WHISKY,
     ),
     Cameo(
-        MetalGuy("Peter", Color(0xFFF2C6A0), Color(0xFF111111), HairStyle.HALF_BALD, BeardStyle.FULL, Color(0xFF263238)),
+        MetalGuy("Peter", Color(0xFFF0C4A0), Color(0xFF2E241E), HairStyle.HALF_BALD, BeardStyle.GOATEE, Color(0xFF151515)),
         shout = "Jetzt knallt's!", shirtText = "Ich bin der Peter", left = Prop.DYNAMITE, right = Prop.DYNAMITE,
+        capBrim = Color(0xFFD7263D), photoShirt = true,
     ),
     Cameo(
         MetalGuy("Langer Lars", Color(0xFFF5C9A0), Color(0xFF5D4037), HairStyle.LONG, BeardStyle.LONG, Color(0xFF3E2723), height = 1.15f),
@@ -171,6 +176,17 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
         drawLine(Color(0xFFECEFF1), Offset(x + 3f * c, shoulderY + 1f * c), Offset(x + 3.5f * c, shoulderY + 8f * c), strokeWidth = 0.7f * c)
         drawRoundRect(Color(0x33000000), topLeft = Offset(x - torsoW * 0.3f, shoulderY + 24f * c), size = Size(torsoW * 0.6f, 9f * c), cornerRadius = CornerRadius(3f * c))
     }
+    if (cameo.photoShirt) {
+        // aufgedrucktes Foto mit Bühnenlicht und einem kleinen Kerl drauf
+        val ph = Offset(x - 6f * c, shoulderY + 15f * c)
+        drawRect(Color(0xFFDCE6F0), topLeft = ph, size = Size(12f * c, 14f * c))
+        drawRect(Color(0xFFC77DBA), topLeft = ph + Offset(0.8f * c, 4f * c), size = Size(10.4f * c, 9.2f * c))
+        drawCircle(Color(0xFFFF8A65), 1.2f * c, ph + Offset(2.5f * c, 5f * c))
+        drawCircle(Color(0xFFFFD180), 1f * c, ph + Offset(9.5f * c, 5.5f * c))
+        drawCircle(Color(0xFFE8B98F), 2f * c, ph + Offset(6f * c, 7f * c))
+        drawRect(Color(0xFF333333), topLeft = ph + Offset(3.6f * c, 4.4f * c), size = Size(4.8f * c, 1.2f * c))
+        drawRoundRect(Color(0xFF222222), topLeft = ph + Offset(2.6f * c, 9.2f * c), size = Size(6.8f * c, 4f * c), cornerRadius = CornerRadius(1.5f * c))
+    }
     val text = cameo.shirtText
     if (text != null) {
         drawIntoCanvas { canvas ->
@@ -223,7 +239,14 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
 
     when (look.beard) {
         BeardStyle.NONE -> Unit
-        BeardStyle.GOATEE -> drawOval(look.hair, topLeft = Offset(x - 2.6f * c, headC.y + 5f * c), size = Size(5.2f * c, 7f * c))
+        BeardStyle.GOATEE -> {
+            // Kinnbart mit Schnauzer, der an den Mundwinkeln runterläuft
+            drawOval(look.hair, topLeft = Offset(x - 2.8f * c, headC.y + 5f * c), size = Size(5.6f * c, 7f * c))
+            drawRoundRect(look.hair, topLeft = Offset(x - 4.2f * c, headC.y + 1.4f * c), size = Size(8.4f * c, 1.8f * c), cornerRadius = CornerRadius(0.9f * c))
+            for (side in listOf(-1f, 1f)) {
+                drawLine(look.hair, Offset(x + side * 3.8f * c, headC.y + 2.2f * c), Offset(x + side * 2.6f * c, headC.y + 7f * c), strokeWidth = 1.3f * c, cap = StrokeCap.Round)
+            }
+        }
         BeardStyle.FULL -> drawArc(
             look.hair, startAngle = 0f, sweepAngle = 180f, useCenter = true,
             topLeft = Offset(x - headW * 1.05f, headC.y - 3f * c), size = Size(headW * 2.1f, headR * 2.2f),
@@ -304,6 +327,20 @@ private fun DrawScope.drawCameo(cameo: Cameo, x: Float, base: Float, c: Float, t
             // glänzende Stirn
             drawOval(Color(0x66FFFFFF), topLeft = Offset(x - 3.5f * c, top + headR * 0.35f), size = Size(5f * c, 2.6f * c))
         }
+    }
+    val brim = cameo.capBrim
+    if (brim != null) {
+        // Basecap: schwarze Kappe, roter Rand am Schirm, kleines Logo
+        val capTop = headC.y - headR * 1.12f
+        drawArc(
+            Color(0xFF1A1A1A), startAngle = 180f, sweepAngle = 180f, useCenter = true,
+            topLeft = Offset(x - headW * 1.06f, capTop), size = Size(headW * 2.12f, headR * 1.5f),
+        )
+        val visorY = capTop + headR * 0.72f
+        drawRoundRect(Color(0xFF1A1A1A), topLeft = Offset(x - headW * 0.4f, visorY - 0.6f * c), size = Size(headW * 1.75f, 2.6f * c), cornerRadius = CornerRadius(1.3f * c))
+        drawRoundRect(brim, topLeft = Offset(x - headW * 0.4f, visorY + 1.4f * c), size = Size(headW * 1.75f, 0.8f * c), cornerRadius = CornerRadius(0.4f * c))
+        drawLine(brim, Offset(x - headW * 1.04f, visorY + 0.6f * c), Offset(x - headW * 0.4f, visorY + 0.6f * c), strokeWidth = 0.8f * c)
+        drawCircle(brim, 0.9f * c, Offset(x + 1f * c, capTop + headR * 0.35f))
     }
     if (look.helmet) {
         // Wikingerhelm mit Hörnern
