@@ -24,7 +24,11 @@ data class GameState(
     /** Wie lange Hubbell das Streicheln noch sichtbar genießt. */
     val petGlow: Float = 0f,
     val pets: Int = 0,
+    /** Restzeit pro Getränk, bis man es wieder bestellen kann. */
+    val cooldowns: Map<Drink, Float> = emptyMap(),
 ) {
+    fun cooldownLeft(drink: Drink): Float = cooldowns[drink] ?: 0f
+
     fun upgradeLevel(upgrade: Upgrade): Int = upgrades[upgrade] ?: 0
 
     /** Summe einer Wirkung über alle gekauften Upgrade-Stufen. */

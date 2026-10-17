@@ -123,10 +123,10 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun serve() {
+    fun serve(drink: Drink) {
         if (screen != Screen.GAME || shopOpen) return
         val before = state
-        val after = GameEngine.serve(before)
+        val after = GameEngine.serve(before, drink)
         if (after === before) return
         state = after
         addFloater("+${after.coins - before.coins} Taler")
@@ -142,10 +142,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
             val dy = item.y * height - y
             dx * dx + dy * dy < radius * radius * (if (item.kind == FallingKind.DEINE_MUDDA) 1.8f else 1f)
         }
-        if (hit == null) {
-            serve()
-            return
-        }
+        // Getränke gibt es nur noch über die Knöpfe unten
+        if (hit == null) return
         falling = falling - hit
         val before = state
         val caught = Falling.catch(before, hit.kind)

@@ -74,10 +74,28 @@ class GameEngineTest {
     @Test
     fun levelAufstiegLegtBelohnungAn() {
         var s = GameState(pegel = 50f)
-        repeat(6) { s = run(GameEngine.serve(s), 1.3f) }
+        repeat(6) { s = run(GameEngine.serve(s), 1.6f) }
         assertEquals(2, s.level)
         assertEquals(listOf(2), s.pendingRewards)
         assertTrue(s.coins >= GameEngine.levelUpCoins(2))
+    }
+
+    @Test
+    fun jedesGetraenkHatSeineEigeneWartezeit() {
+        var s = GameState(pegel = 30f, unlocked = setOf(Drink.HELLES, Drink.STOUT))
+        s = GameEngine.serve(s, Drink.STOUT)
+        assertFalse(GameEngine.canServe(s, Drink.STOUT))
+        assertTrue(GameEngine.canServe(s, Drink.HELLES))
+        s = GameEngine.serve(s, Drink.HELLES)
+        assertEquals(2, s.drinksServed)
+        // Stout war beim zweiten Bestellen noch nicht leer und wurde in einem Zug geleert
+        assertTrue(s.pegel >= 30f + Drink.STOUT.boost - 0.1f)
+        s = run(s, 2f)
+        assertTrue(GameEngine.canServe(s, Drink.HELLES))
+        assertFalse(GameEngine.canServe(s, Drink.STOUT))
+        s = run(s, 2f)
+        assertTrue(GameEngine.canServe(s, Drink.STOUT))
+        assertTrue(Drink.DRACHENBLUT.cooldown > Drink.HELLES.cooldown)
     }
 
     @Test

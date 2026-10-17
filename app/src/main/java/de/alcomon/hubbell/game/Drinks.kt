@@ -33,7 +33,27 @@ enum class Drink(
     RUM("Piratenrum", "Yo-ho-ho und eine Buddel voll Rum.", 52f, 32, 2.0f, 2000, 11, Glass.TUMBLER, 0xFF7A3E12),
     ABSINTH("Grüne Fee", "Absinth. Hubbell sieht kurz Einhörner.", 60f, 42, 2.1f, 3200, 12, Glass.SHOT, 0xFF7CD64B),
     SPEZIAL("Hubbell-Spezial", "Geheimrezept des Hauses. Nicht fragen.", 70f, 60, 2.4f, 4000, 13, Glass.COCKTAIL, 0xFFFF5FA2, 0xFFFFB347),
-    DRACHENBLUT("Drachenblut", "Brennt wie Feuer, schmeckt wie ein Gitarrensolo.", 95f, 100, 2.6f, 12000, 17, Glass.COCKTAIL, 0xFFB71C1C, 0xFF1A0505),
+    DRACHENBLUT("Drachenblut", "Brennt wie Feuer, schmeckt wie ein Gitarrensolo.", 95f, 100, 2.6f, 12000, 17, Glass.COCKTAIL, 0xFFB71C1C, 0xFF1A0505);
+
+    /**
+     * Sekunden, bis dieses Getränk wieder bestellt werden kann. Billiges geht schnell,
+     * Edles bringt mehr, braucht aber länger.
+     */
+    val cooldown: Float
+        get() = when (this) {
+            HELLES -> 1.5f
+            PILS -> 2f
+            WEIZEN -> 2.5f
+            STOUT -> 3.5f
+            BOCK -> 4.5f
+            WEIN -> 5f
+            MET -> 6f
+            WHISKY -> 7.5f
+            RUM -> 8.5f
+            ABSINTH -> 9.5f
+            SPEZIAL -> 11f
+            DRACHENBLUT -> 14f
+        }
 }
 
 /** Wirkung eines Upgrades. Werte gleicher Wirkung addieren sich über alle Upgrades. */

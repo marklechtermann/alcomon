@@ -22,7 +22,18 @@ object GameEngine {
     }
 
     fun drinkDuration(s: GameState, drink: Drink): Float =
-        drink.drinkSeconds * (1f - min(0.6f, s.effect(Effect.SPEED)))
+        min(drink.drinkSeconds, drink.cooldown) * (1f - min(0.6f, s.effect(Effect.SPEED)))
+
+    /** Wartezeit, bis das Getränk wieder bestellt werden kann; Tempo-Upgrades verkürzen sie. */
+    fun cooldownFor(s: GameState, drink: Drink): Float =
+        drink.cooldown * (1f - min(0.6f, s.effect(Effect.SPEED)))
+
+    /** 0..1: wie weit die Wartezeit des Getränks schon abgelaufen ist (1 = bereit). */
+    fun readiness(s: GameState, drink: Drink): Float {
+        val left = s.cooldownLeft(drink)
+        if (left <= 0f) return 1f
+        return (1f - left / cooldownFor(s, drink)).coerceIn(0f, 1f)
+    }
 
     /** Pegelzuwachs eines Getränks inklusive Upgrades. */
     fun boostFor(s: GameState, drink: Drink): Float = drink.boost * (1f + s.effect(Effect.BOOST))
@@ -71,15 +82,32 @@ object GameEngine {
         return if (rate <= 0f) null else 6f / (0.5f + 0.5f * rate)
     }
 
-    fun canServe(s: GameState): Boolean = !s.gameOver && s.drinking == null
+    fun canServe(s: GameState, drink: Drink): Boolean =
+        !s.gameOver && drink in s.unlocked && s.cooldownLeft(drink) <= 0f
 
+    /** Das beste Getränk, das gerade bereit ist, oder null. */
+    fun bestReady(s: GameState): Drink? = Drink.entries.lastOrNull { canServe(s, it) }
+
+    /**
+     * Ein Getränk bestellen. Jedes Getränk hat seine eigene Wartezeit, mehrere verschiedene
+     * dürfen also kurz nacheinander kommen; ein noch laufendes wird dann in einem Zug geleert.
+     */
     fun serve(s: GameState, drink: Drink = s.selected): GameState {
-        if (!canServe(s) || drink !in s.unlocked) return s
+        if (!canServe(s, drink)) return s
+        var pegel = s.pegel
+        val current = s.drinking
+        if (current != null && s.drinkRemaining > 0f) {
+            pegel += boostFor(s, current) * s.drinkRemaining / drinkDuration(s, current)
+        }
         val served = s.copy(
+            pegel = pegel.coerceAtMost(MAX_PEGEL),
+            rescueSecondsLeft = if (pegel > 0f) null else s.rescueSecondsLeft,
             drinking = drink,
             drinkRemaining = drinkDuration(s, drink),
             coins = s.coins + coinsFor(s, drink),
             drinksServed = s.drinksServed + 1,
+            selected = drink,
+            cooldowns = s.cooldowns + (drink to cooldownFor(s, drink)),
         )
         return gainXp(served, drink.boost)
     }
@@ -131,6 +159,9 @@ object GameEngine {
         }
 
         var next = s.copy(
+            cooldowns = if (s.cooldowns.isEmpty()) s.cooldowns else s.cooldowns
+                .mapValues { (_, left) -> left - dt }
+                .filterValues { it > 0f },
             pegel = pegel,
             drinking = drinking,
             drinkRemaining = remaining,
@@ -151,8 +182,9 @@ object GameEngine {
         val interval = waiterInterval(s)
         if (interval != null && !over) {
             val timer = next.waitressTimer + dt
-            next = if (timer >= interval && next.drinking == null) {
-                serve(next.copy(waitressTimer = 0f))
+            val ready = bestReady(next)
+            next = if (timer >= interval && next.drinking == null && ready != null) {
+                serve(next.copy(waitressTimer = 0f), ready)
             } else {
                 next.copy(waitressTimer = min(timer, interval))
             }

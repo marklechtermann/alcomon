@@ -38,6 +38,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -160,7 +161,7 @@ fun GameScreen(vm: GameViewModel) {
                     SpecialCheer(vm.specialCheer, Modifier.align(Alignment.Center))
                 }
                 Text(
-                    "Tippen = Getränk bringen · über den Kopf wischen = streicheln",
+                    "Getränk unten antippen · über den Kopf wischen = streicheln",
                     modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp),
                     color = PubColors.Cream.copy(alpha = if (s.drinksServed < 6) 0.85f else 0f),
                     fontSize = 12.sp,
@@ -233,70 +234,77 @@ private fun TopHud(s: GameState, time: () -> Float, soundOn: Boolean, onToggleSo
 
 @Composable
 private fun BottomBar(s: GameState, vm: GameViewModel) {
-    Column(Modifier.fillMaxWidth().background(PubColors.Panel).padding(12.dp)) {
+    Row(
+        Modifier.fillMaxWidth().background(PubColors.Panel).padding(horizontal = 10.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Jedes gekaufte Getränk ist ein eigener Knopf mit eigener Wartezeit
         Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Drink.entries.filter { it in s.unlocked }.forEach { drink ->
-                DrinkChip(drink, selected = drink == s.selected, onClick = { vm.select(drink) })
+            Drink.entries.filter { it in s.unlocked }.reversed().forEach { drink ->
+                DrinkButton(
+                    drink = drink,
+                    readiness = GameEngine.readiness(s, drink),
+                    secondsLeft = s.cooldownLeft(drink),
+                    onClick = { vm.serve(drink) },
+                )
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val drinking = s.drinking
-            Button(
-                onClick = vm::serve,
-                enabled = drinking == null,
-                modifier = Modifier.weight(1f).height(60.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                if (drinking != null) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Gluck, gluck …", fontSize = 16.sp)
-                        LinearProgressIndicator(
-                            progress = { s.drinkProgress },
-                            modifier = Modifier.padding(top = 4.dp).width(120.dp),
-                        )
-                    }
-                } else {
-                    Text("Prost! ${s.selected.displayName}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
+        Spacer(Modifier.width(8.dp))
+        Box {
+            OutlinedButton(onClick = vm::openShop, modifier = Modifier.height(84.dp), shape = RoundedCornerShape(16.dp)) {
+                Text("Shop", fontSize = 16.sp, color = PubColors.Gold, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.width(10.dp))
-            Box {
-                OutlinedButton(onClick = vm::openShop, modifier = Modifier.height(60.dp), shape = RoundedCornerShape(16.dp)) {
-                    Text("Shop", fontSize = 16.sp, color = PubColors.Gold, fontWeight = FontWeight.Bold)
-                }
-                if (GameEngine.anythingAffordable(s)) {
-                    Box(
-                        Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 4.dp, y = (-4).dp)
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(PubColors.Red),
-                    )
-                }
+            if (GameEngine.anythingAffordable(s)) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 4.dp, y = (-4).dp)
+                        .size(14.dp)
+                        .clip(CircleShape)
+                        .background(PubColors.Red),
+                )
             }
         }
     }
 }
 
+/** Ein Getränk zum Antippen; der Hintergrund füllt sich wie ein Balken, bis es wieder bereit ist. */
 @Composable
-private fun DrinkChip(drink: Drink, selected: Boolean, onClick: () -> Unit) {
+private fun DrinkButton(drink: Drink, readiness: Float, secondsLeft: Float, onClick: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
-    Column(
+    val ready = readiness >= 1f
+    Box(
         Modifier
+            .width(76.dp)
+            .height(84.dp)
             .clip(shape)
-            .background(if (selected) PubColors.Gold.copy(alpha = 0.22f) else PubColors.PanelLight)
-            .border(2.dp, if (selected) PubColors.Gold else Color.Transparent, shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+            .background(PubColors.PanelLight)
+            .drawBehind {
+                val h = size.height * readiness
+                drawRect(
+                    if (ready) PubColors.Gold.copy(alpha = 0.3f) else PubColors.Gold.copy(alpha = 0.18f),
+                    topLeft = androidx.compose.ui.geometry.Offset(0f, size.height - h),
+                    size = androidx.compose.ui.geometry.Size(size.width, h),
+                )
+            }
+            .border(2.dp, if (ready) PubColors.Gold else Color.Transparent, shape)
+            .clickable(enabled = ready, onClick = onClick)
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        DrinkIcon(drink, 40.dp)
-        Text(drink.displayName, color = PubColors.Cream, fontSize = 12.sp)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.graphicsLayer { alpha = if (ready) 1f else 0.55f }) { DrinkIcon(drink, 40.dp) }
+            Text(drink.displayName, color = PubColors.Cream, fontSize = 11.sp, maxLines = 1)
+            Text(
+                if (ready) "+${drink.boost.toInt()} Prost!" else "${ceil(secondsLeft * 10f).toInt() / 10f} s",
+                color = if (ready) PubColors.Gold else PubColors.Cream.copy(alpha = 0.7f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
