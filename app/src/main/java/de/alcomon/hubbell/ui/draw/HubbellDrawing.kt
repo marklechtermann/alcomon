@@ -112,6 +112,9 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
         drawDrink(next, Offset(cx + 28.5f * u, tableTop - 15f * u), 10f * u, 16f * u, 1f)
     }
 
+    // Ab und zu hat Hubbell Hunger und baut sich einen Döner
+    if (knock == null) drawDoenerBreak(pose.time, cx, tableTop, u, Skin)
+
     // Gäste, die ab und zu von unten ins Bild hüpfen
     drawCameos(pose.time, u)
 
