@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import de.alcomon.hubbell.audio.Sfx
+import de.alcomon.hubbell.audio.MusicPlayer
 import de.alcomon.hubbell.audio.SoundPlayer
 import de.alcomon.hubbell.data.SaveStore
 import de.alcomon.hubbell.game.Drink
@@ -54,9 +55,9 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     private val sound = SoundPlayer().also { it.enabled = store.soundOn }
+    private val music = MusicPlayer(app).also { it.enabled = store.soundOn }
     var soundOn by mutableStateOf(store.soundOn)
         private set
-    private var riffTimer = nextRiffDelay()
 
     var falling by mutableStateOf(emptyList<FallingItem>())
         private set
@@ -238,6 +239,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         soundOn = !soundOn
         store.soundOn = soundOn
         sound.enabled = soundOn
+        music.enabled = soundOn
     }
 
     private fun playEventSounds(before: GameState, after: GameState, dt: Float) {
@@ -254,17 +256,8 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         ) {
             sound.play(Sfx.ALARM)
         }
-        // Ab und zu ein Gitarrenriff, solange Hubbell gut drauf ist
-        riffTimer -= dt
-        if (riffTimer <= 0f) {
-            riffTimer = nextRiffDelay()
-            if (!after.inRescue && after.drinking == null) {
-                sound.play(listOf(Sfx.RIFF_1, Sfx.RIFF_2, Sfx.RIFF_3).random())
-            }
-        }
+        // Gitarrenriffs zwischendurch gibt es nicht mehr, dafür läuft die Hintergrundmusik
     }
-
-    private fun nextRiffDelay(): Float = 20f + Random.nextFloat() * 20f
 
     fun select(drink: Drink) {
         state = GameEngine.select(state, drink)
@@ -314,7 +307,6 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
         lastResult = null
         shopOpen = false
         screen = Screen.GAME
-        riffTimer = nextRiffDelay()
         sound.play(Sfx.RIFF_1)
         save()
     }
@@ -335,11 +327,13 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onPause() {
         motion.stop()
+        music.pause()
         save()
         pausedAt = System.currentTimeMillis()
     }
 
     fun onResume() {
+        music.resume()
         val since = pausedAt ?: return
         pausedAt = null
         catchUpSince(since)
@@ -383,6 +377,7 @@ class GameViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         motion.stop()
         sound.release()
+        music.release()
     }
 
     private fun addFloater(text: String) {
