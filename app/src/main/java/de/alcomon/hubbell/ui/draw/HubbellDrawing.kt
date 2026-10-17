@@ -121,6 +121,7 @@ fun DrawScope.drawHubbellScene(pose: HubbellPose) {
     drawCrowdsurf(pose.time, u)
     // Nadine rennt ab und zu vorne durch
     drawNadine(pose.time, u)
+    drawJuergen(pose.time, u)
 
     if (knock != null) {
         val seated = Offset(cx, tableTop - 41f * u)

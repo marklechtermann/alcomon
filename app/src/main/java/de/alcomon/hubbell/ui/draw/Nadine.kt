@@ -101,3 +101,80 @@ fun DrawScope.drawNadine(time: Float, u: Float) {
     drawCircle(NadineSkin, 3.2f * c, hand)
     drawLine(Color(0x55000000), hand + Offset(-1.6f * c, 0.6f * c), hand + Offset(1.6f * c, 0.6f * c), strokeWidth = 0.6f * c)
 }
+
+// Jürgen schlendert in einer dritten Lücke durchs Bild
+private const val WALK_OFFSET = 53.2f
+private const val WALK_LENGTH = 5.6f
+
+private val Grey = Color(0xFFB8B8B8)
+private val JuergenSkin = Color(0xFFEDC09A)
+
+/** Jürgen: wenige graue Haare, schwarzes Shirt mit „JÜÜÜÜRGEN“, schlendert mit Bier vorbei. */
+fun DrawScope.drawJuergen(time: Float, u: Float) {
+    val shifted = time - WALK_OFFSET
+    if (shifted < 0f) return
+    val k = floor(shifted / RUN_PERIOD).toInt()
+    val t = shifted - k * RUN_PERIOD
+    if (t > WALK_LENGTH) return
+    val c = u * 1.1f
+    val w = size.width
+    val dir = if (k % 2 == 0) 1f else -1f
+    val q = t / WALK_LENGTH
+    val x = if (dir > 0) -30f * c + (w + 60f * c) * q else w + 30f * c - (w + 60f * c) * q
+    val bob = abs(sin(t * 6f)) * 1.5f * c
+    val shoulderY = size.height - 24f * c - bob
+    val headC = Offset(x, shoulderY - 9.5f * c)
+
+    val torsoW = 36f * c
+    drawRoundRect(Color(0xFF111111), topLeft = Offset(x - torsoW / 2f, shoulderY), size = Size(torsoW, 40f * c), cornerRadius = CornerRadius(10f * c))
+    drawIntoCanvas { canvas ->
+        NadinePaint.color = Color(0xFFF2EDE0).toArgb()
+        NadinePaint.textSize = 7f * c
+        while (NadinePaint.measureText("JÜÜÜÜRGEN") > torsoW * 0.92f && NadinePaint.textSize > 3f) NadinePaint.textSize *= 0.93f
+        canvas.nativeCanvas.drawText("JÜÜÜÜRGEN", x, shoulderY + 12f * c, NadinePaint)
+    }
+
+    // Kopf: Glatze mit grauem Haarkranz und ein paar einzelnen grauen Härchen obendrauf
+    drawCircle(JuergenSkin, 9f * c, headC)
+    for (side in listOf(-1f, 1f)) {
+        drawArc(Grey, if (side < 0) 110f else -70f, 140f, false, topLeft = headC + Offset(-9.3f * c, -8f * c), size = Size(18.6f * c, 16f * c), style = Stroke(2.2f * c))
+    }
+    for (i in -1..1) {
+        val root = headC + Offset(i * 2.2f * c, -8.8f * c)
+        drawLine(Grey, root, root + Offset(i * 1.2f * c + sin(t * 4f + i) * 0.8f * c, -3.5f * c), strokeWidth = 0.6f * c, cap = StrokeCap.Round)
+    }
+    drawOval(Color(0x55FFFFFF), topLeft = headC + Offset(-4f * c, -8f * c), size = Size(5f * c, 2.5f * c))
+    // gemütliches Gesicht
+    drawCircle(Color(0xFF2B1A12), 1f * c, headC + Offset(-3f * c, -1f * c))
+    drawCircle(Color(0xFF2B1A12), 1f * c, headC + Offset(3f * c, -1f * c))
+    drawLine(Grey, headC + Offset(-4.5f * c, -3.2f * c), headC + Offset(-1.5f * c, -3.4f * c), strokeWidth = 0.8f * c)
+    drawLine(Grey, headC + Offset(1.5f * c, -3.4f * c), headC + Offset(4.5f * c, -3.2f * c), strokeWidth = 0.8f * c)
+    drawArc(Color(0xFF2B1A12), 20f, 140f, false, topLeft = headC + Offset(-3f * c, 1.5f * c), size = Size(6f * c, 3.5f * c), style = Stroke(0.8f * c))
+
+    // Bier in der einen Hand, die andere schwingt beim Gehen
+    val swing = sin(t * 6f) * 4f * c
+    val front = Offset(x + dir * (torsoW / 2f - 3f * c), shoulderY + 4f * c)
+    val beerHand = front + Offset(dir * 6f * c, 8f * c)
+    drawLine(JuergenSkin, front, beerHand, strokeWidth = 4.5f * c, cap = StrokeCap.Round)
+    drawLine(Color(0xFF111111), front, front + (beerHand - front) * 0.35f, strokeWidth = 6f * c, cap = StrokeCap.Round)
+    drawDrink(de.alcomon.hubbell.game.Drink.HELLES, beerHand + Offset(-4f * c, -12f * c), 8f * c, 12f * c, 1f)
+    drawCircle(JuergenSkin, 3f * c, beerHand)
+    val back = Offset(x - dir * (torsoW / 2f - 3f * c), shoulderY + 4f * c)
+    drawLine(JuergenSkin, back, back + Offset(-dir * 3f * c + swing, 14f * c), strokeWidth = 4.5f * c, cap = StrokeCap.Round)
+    drawLine(Color(0xFF111111), back, back + Offset(-dir * 1f * c, 4f * c), strokeWidth = 6f * c, cap = StrokeCap.Round)
+
+    // Er hat gehört, dass jemand nach ihm ruft
+    if (q in 0.25f..0.8f) {
+        drawIntoCanvas { canvas ->
+            NadinePaint.textSize = 4.6f * c
+            NadinePaint.color = Color(0xFF1A1A1A).toArgb()
+            val text = "Hat wer Jürgen gerufen?"
+            val bw = NadinePaint.measureText(text) + 6f * c
+            val bx = headC.x.coerceIn(bw / 2f + 4f, size.width - bw / 2f - 4f)
+            val top = headC.y - 24f * c
+            drawRoundRect(Color.White, topLeft = Offset(bx - bw / 2f, top), size = Size(bw, 8f * c), cornerRadius = CornerRadius(3f * c))
+            drawRoundRect(Color(0xFF1A1A1A), topLeft = Offset(bx - bw / 2f, top), size = Size(bw, 8f * c), cornerRadius = CornerRadius(3f * c), style = Stroke(0.6f * c))
+            canvas.nativeCanvas.drawText(text, bx, top + 5.6f * c, NadinePaint)
+        }
+    }
+}
